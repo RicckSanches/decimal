@@ -1,17 +1,15 @@
 #include <check.h>
 #include "../s21_decimal.h"
 
-#define DEC_BITS 128
-#define BIG_DEC_BITS 256
+/* ============================================================================
+ * get_bit / set_bit / sign / scale / clear_decimal_bits
+ * ==========================================================================*/
 
-// ----------------------
-// get_bit
-// ----------------------
+/* ---------------- get_bit ---------------- */
 START_TEST(test_get_bit_decimal_all_zero) {
     s21_decimal d = {{0}};
-    for (int i = 0; i < 96; i++) {
+    for (int i = 0; i < 96; i++)
         ck_assert_int_eq(get_bit(d.bits, DEC_BITS, i), 0);
-    }
 }
 END_TEST
 
@@ -30,16 +28,15 @@ END_TEST
 
 START_TEST(test_get_bit_big_decimal_all_zero) {
     s21_big_decimal d = {{0}};
-    for (int i = 0; i < 224; i++) {
+    for (int i = 0; i < 224; i++)
         ck_assert_int_eq(get_bit(d.bits, BIG_DEC_BITS, i), 0);
-    }
 }
 END_TEST
 
 START_TEST(test_get_bit_big_decimal_set_bits) {
     s21_big_decimal d = {{0}};
     d.bits[0] = 0b101;
-    d.bits[3] = 0x80000000; // здесь это часть мантиссы
+    d.bits[3] = 0x80000000;
     d.bits[6] = 1u << 31;
 
     ck_assert_int_eq(get_bit(d.bits, BIG_DEC_BITS, 0), 1);
@@ -60,12 +57,9 @@ START_TEST(test_get_bit_out_of_range) {
 }
 END_TEST
 
-// ----------------------
-// set_bit
-// ----------------------
+/* ---------------- set_bit ---------------- */
 START_TEST(test_set_bit_decimal) {
     s21_decimal d = {{0}};
-
     set_bit(d.bits, DEC_BITS, 0, 1);
     set_bit(d.bits, DEC_BITS, 31, 1);
     set_bit(d.bits, DEC_BITS, 64, 1);
@@ -81,7 +75,6 @@ END_TEST
 
 START_TEST(test_set_bit_big_decimal) {
     s21_big_decimal d = {{0}};
-
     set_bit(d.bits, BIG_DEC_BITS, 0, 1);
     set_bit(d.bits, BIG_DEC_BITS, 127, 1);
     set_bit(d.bits, BIG_DEC_BITS, 223, 1);
@@ -92,9 +85,7 @@ START_TEST(test_set_bit_big_decimal) {
 }
 END_TEST
 
-// ----------------------
-// sign
-// ----------------------
+/* ---------------- sign ---------------- */
 START_TEST(test_decimal_sign) {
     s21_decimal d = {{0}};
     set_sign(d.bits, DEC_BITS, 1);
@@ -113,9 +104,7 @@ START_TEST(test_big_decimal_sign) {
 }
 END_TEST
 
-// ----------------------
-// scale
-// ----------------------
+/* ---------------- scale ---------------- */
 START_TEST(test_decimal_scale) {
     s21_decimal d = {{0}};
     set_scale(d.bits, DEC_BITS, 5);
@@ -130,9 +119,7 @@ START_TEST(test_big_decimal_scale) {
 }
 END_TEST
 
-// ----------------------
-// clear_decimal_bits
-// ----------------------
+/* ---------------- clear_decimal_bits ---------------- */
 START_TEST(test_decimal_clear) {
     s21_decimal d = {{0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0x80050000}};
     clear_decimal_bits(d.bits, DEC_BITS);
@@ -158,86 +145,37 @@ START_TEST(test_big_decimal_clear) {
 }
 END_TEST
 
-// ----------------------
-// Suite
-// ----------------------
-Suite *get_bit_suite(void) {
-    Suite *s = suite_create("get_bit");
-    TCase *tc = tcase_create("Core");
+/* ============================================================================
+ * Suite
+ * ==========================================================================*/
 
-    tcase_add_test(tc, test_get_bit_decimal_all_zero);
-    tcase_add_test(tc, test_get_bit_decimal_set_bits);
-    tcase_add_test(tc, test_get_bit_big_decimal_all_zero);
-    tcase_add_test(tc, test_get_bit_big_decimal_set_bits);
-    tcase_add_test(tc, test_get_bit_out_of_range);
+Suite *decimal_helpers_suite(void) {
+    Suite *s = suite_create("Decimal Helpers");
+    TCase *tc_core = tcase_create("Core");
 
-    suite_add_tcase(s, tc);
-    return s;
-}
+    /* get_bit */
+    tcase_add_test(tc_core, test_get_bit_decimal_all_zero);
+    tcase_add_test(tc_core, test_get_bit_decimal_set_bits);
+    tcase_add_test(tc_core, test_get_bit_big_decimal_all_zero);
+    tcase_add_test(tc_core, test_get_bit_big_decimal_set_bits);
+    tcase_add_test(tc_core, test_get_bit_out_of_range);
 
-Suite *set_bit_suite(void) {
-    Suite *s = suite_create("set_bit");
-    TCase *tc = tcase_create("Core");
+    /* set_bit */
+    tcase_add_test(tc_core, test_set_bit_decimal);
+    tcase_add_test(tc_core, test_set_bit_big_decimal);
 
-    tcase_add_test(tc, test_set_bit_decimal);
-    tcase_add_test(tc, test_set_bit_big_decimal);
+    /* sign */
+    tcase_add_test(tc_core, test_decimal_sign);
+    tcase_add_test(tc_core, test_big_decimal_sign);
 
-    suite_add_tcase(s, tc);
-    return s;
-}
+    /* scale */
+    tcase_add_test(tc_core, test_decimal_scale);
+    tcase_add_test(tc_core, test_big_decimal_scale);
 
+    /* clear_decimal_bits */
+    tcase_add_test(tc_core, test_decimal_clear);
+    tcase_add_test(tc_core, test_big_decimal_clear);
 
-Suite *get_sign_suite(void) {
-    Suite *s = suite_create("get_sign");
-    TCase *tc = tcase_create("Core");
-
-    tcase_add_test(tc, test_decimal_sign);
-    tcase_add_test(tc, test_big_decimal_sign);
-
-    suite_add_tcase(s, tc);
-    return s;
-}
-
-Suite *set_sign_suite(void) {
-    Suite *s = suite_create("set_sign");
-    TCase *tc = tcase_create("Core");
-
-    tcase_add_test(tc, test_decimal_sign);
-    tcase_add_test(tc, test_big_decimal_sign);
-
-    suite_add_tcase(s, tc);
-    return s;
-}
-
-Suite *get_scale_suite(void) {
-    Suite *s = suite_create("get_scale");
-    TCase *tc = tcase_create("Core");
-
-    tcase_add_test(tc, test_decimal_scale);
-    tcase_add_test(tc, test_big_decimal_scale);
-
-    suite_add_tcase(s, tc);
-    return s;
-}
-
-Suite *set_scale_suite(void) {
-    Suite *s = suite_create("set_scale");
-    TCase *tc = tcase_create("Core");
-
-    tcase_add_test(tc, test_decimal_scale);
-    tcase_add_test(tc, test_big_decimal_scale);
-
-    suite_add_tcase(s, tc);
-    return s;
-}
-
-Suite *clear_decimal_bits_suite(void) {
-    Suite *s = suite_create("clear_decimal_bits");
-    TCase *tc = tcase_create("Core");
-
-    tcase_add_test(tc, test_decimal_clear);
-    tcase_add_test(tc, test_big_decimal_clear);
-
-    suite_add_tcase(s, tc);
+    suite_add_tcase(s, tc_core);
     return s;
 }
