@@ -8,7 +8,7 @@ typedef struct {
 } s21_decimal;
 
 typedef struct {
-    uint32_t bits[6]; // 192 бита
+    uint32_t bits[8]; //  256 бита
 } s21_big_decimal;
 
 // Коды ошибок
@@ -44,12 +44,12 @@ int s21_truncate(s21_decimal value, s21_decimal *result);
 int s21_negate(s21_decimal value, s21_decimal *result);
 
 //helpers
-int get_bit(s21_decimal d, int index);
-void set_bit(s21_decimal *d, int index, int value);
-int get_sign(s21_decimal d);
-void set_sign(s21_decimal *d, int sign);
-int get_scale(s21_decimal d);
-void set_scale(s21_decimal *d, int scale);
-void clear_decimal(s21_decimal *d);
+int get_bit(const uint32_t *bits, int size_in_bits, int index);
+void set_bit(uint32_t *bits, int size_in_bits, int index, int value);
+int get_sign(const uint32_t *bits);
+void set_sign(uint32_t *bits, int sign);
+int get_scale(const uint32_t *bits);
+void set_scale(uint32_t *bits, int scale);
+void clear_decimal_bits(uint32_t *bits, int size_in_bits);
 
 #endif
