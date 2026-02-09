@@ -2,29 +2,26 @@
 
 Suite *get_bit_suite(void);
 Suite *set_bit_suite(void);
-Suite *sign_suite(void);
-Suite *scale_suite(void);
-Suite *clear_bits_suite(void);
+Suite *get_sign_suite(void);
+Suite *set_sign_suite(void);
+Suite *get_scale_suite(void);
+Suite *set_scale_suite(void);
+Suite *clear_decimal_bits_suite(void);
 
 int main(void) {
-    int number_failed;
+    int failed;
+    SRunner *sr = srunner_create(get_bit_suite());
 
-    Suite *s_get  = get_bit_suite();
-    Suite *s_set  = set_bit_suite();
-    Suite *s_sign  = sign_suite();
-    Suite *s_scale  = scale_suite();
-    Suite *s_clear  = clear_bits_suite();
-
-    SRunner *sr = srunner_create(s_get);
-    srunner_add_suite(sr, s_set);
-    srunner_add_suite(sr, s_sign);
-    srunner_add_suite(sr, s_scale);
-    srunner_add_suite(sr, s_clear);
+    srunner_add_suite(sr, set_bit_suite());
+    srunner_add_suite(sr, get_sign_suite());
+    srunner_add_suite(sr, set_sign_suite());
+    srunner_add_suite(sr, get_scale_suite());
+    srunner_add_suite(sr, set_scale_suite());
+    srunner_add_suite(sr, clear_decimal_bits_suite());
 
     srunner_run_all(sr, CK_VERBOSE);
-    number_failed = srunner_ntests_failed(sr);
-
+    failed = srunner_ntests_failed(sr);
     srunner_free(sr);
 
-    return (number_failed == 0) ? 0 : 1;
+    return failed == 0 ? 0 : 1;
 }

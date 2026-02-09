@@ -46,10 +46,10 @@ int s21_negate(s21_decimal value, s21_decimal *result);
 //helpers
 int get_bit(const uint32_t *bits, int size_in_bits, int index);
 void set_bit(uint32_t *bits, int size_in_bits, int index, int value);
-int get_sign(const uint32_t *bits);
-void set_sign(uint32_t *bits, int sign);
-int get_scale(const uint32_t *bits);
-void set_scale(uint32_t *bits, int scale);
+int get_sign(const uint32_t* bits, int size_in_bits);
+void set_sign(uint32_t *bits, int size_in_bits, int sign);
+int get_scale(const uint32_t *bits, int size_in_bits);
+void set_scale(uint32_t *bits, int size_in_bits, int scale);
 void clear_decimal_bits(uint32_t *bits, int size_in_bits);
 
 #endif
