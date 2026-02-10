@@ -76,7 +76,7 @@ void bank_round(s21_big_decimal *big, int remainder) {
   }
 }
 
-int big_decimal_to_decimal(s21_big_decimal* big, s21_decimal* dec) {
+void big_decimal_to_decimal(s21_big_decimal* big, s21_decimal* dec) {
   int scale = get_scale(big->bits, BIG_DEC_BITS);
 
   // Уменьшаем scale, пока decimal не вмещается
@@ -92,6 +92,4 @@ int big_decimal_to_decimal(s21_big_decimal* big, s21_decimal* dec) {
 
   set_sign(dec->bits, DEC_BITS, get_sign(big->bits, BIG_DEC_BITS));
   set_scale(dec->bits, DEC_BITS, scale);
-
-  return 0;
 }
