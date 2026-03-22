@@ -5,7 +5,7 @@ static inline int get_high_word_index(int size_in_bits) {
 }
 
 static inline int get_mantissa_bits(int size_in_bits) {
-  return size_in_bits - 32;  // старшее слово только для метаданных
+  return size_in_bits - 32;
 }
 
 int get_bit(const uint32_t* bits, int size_in_bits, int index) {
@@ -60,4 +60,35 @@ void clear_decimal_bits(uint32_t* bits, int size_in_bits, int clear_metadata) {
   if (clear_metadata) {
     bits[high] = 0;
   }
+}
+
+// Делим big_decimal на 10, возвращаем остаток 0..9
+int div10(uint32_t *bits, int size_in_bits) {
+    uint64_t remainder = 0;
+
+    int high = get_high_word_index(size_in_bits);
+
+    // идём по ВСЕЙ мантиссе (кроме metadata)
+    for (int i = high - 1; i >= 0; i--) {
+        uint64_t cur = (remainder << 32) | bits[i];
+        bits[i] = (uint32_t)(cur / 10);
+        remainder = cur % 10;
+    }
+
+    return (int)remainder;
+}
+
+// Умножение big_decimal на 10 (для normalize)
+int mul10(uint32_t *bits, int size_in_bits) {
+    uint64_t carry = 0;
+
+    int high = get_high_word_index(size_in_bits);
+
+    for (int i = 0; i < high; i++) {
+        uint64_t cur = (uint64_t)bits[i] * 10 + carry;
+        bits[i] = (uint32_t)cur;
+        carry = cur >> 32;
+    }
+
+    return (carry != 0); // 1 если overflow
 }

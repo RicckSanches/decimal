@@ -56,6 +56,9 @@ void set_sign(uint32_t* bits, int size_in_bits, int sign);
 int get_scale(const uint32_t* bits, int size_in_bits);
 void set_scale(uint32_t* bits, int size_in_bits, int scale);
 void clear_decimal_bits(uint32_t* bits, int size_in_bits, int clear_metadata);
+int div10(uint32_t *bits, int size_in_bits);
+int mul10(uint32_t *bits, int size_in_bits);
+
 
 // arithmetic_helpers
 void decimal_to_big_decimal(const s21_decimal* dec, s21_big_decimal* big);
