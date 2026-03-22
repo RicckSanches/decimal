@@ -119,29 +119,88 @@ START_TEST(test_big_decimal_scale) {
 }
 END_TEST
 
-/* ---------------- clear_decimal_bits ---------------- */
-START_TEST(test_decimal_clear) {
-    s21_decimal d = {{0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0x80050000}};
-    clear_decimal_bits(d.bits, DEC_BITS);
+/* -------------------- Decimal clear tests -------------------- */
+START_TEST(test_decimal_clear_keep_metadata) {
+    s21_decimal d = {{0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x80050000}};
 
+    // Очищаем только мантиссу, оставляем metadata
+    clear_decimal_bits(d.bits, DEC_BITS, 0);
+
+    // Мантисса обнулена
     for (int i = 0; i < 3; i++)
         ck_assert_int_eq(d.bits[i], 0);
 
+    // Metadata остались
     ck_assert_int_eq(get_sign(d.bits, DEC_BITS), 1);
     ck_assert_int_eq(get_scale(d.bits, DEC_BITS), 5);
 }
 END_TEST
 
-START_TEST(test_big_decimal_clear) {
-    s21_big_decimal d = {{0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,
-                          0xFFFFFFFF,0xFFFFFFFF,0xFFFFFFFF,0x80050000}};
-    clear_decimal_bits(d.bits, BIG_DEC_BITS);
+START_TEST(test_decimal_clear_full) {
+    s21_decimal d = {{0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x80050000}};
+
+    // Полное обнуление, включая metadata
+    clear_decimal_bits(d.bits, DEC_BITS, 1);
+
+    for (int i = 0; i < 4; i++)
+        ck_assert_int_eq(d.bits[i], 0);
+}
+END_TEST
+
+START_TEST(test_big_decimal_clear_keep_metadata) {
+    s21_big_decimal d = {
+        {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+         0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x80050000}
+    };
+
+    // Очищаем мантиссу (первые 7 слов), оставляем metadata
+    clear_decimal_bits(d.bits, BIG_DEC_BITS, 0);
 
     for (int i = 0; i < 7; i++)
         ck_assert_int_eq(d.bits[i], 0);
 
+    // Metadata остались
     ck_assert_int_eq(get_sign(d.bits, BIG_DEC_BITS), 1);
     ck_assert_int_eq(get_scale(d.bits, BIG_DEC_BITS), 5);
+}
+END_TEST
+
+START_TEST(test_big_decimal_clear_full) {
+    s21_big_decimal d = {
+        {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF,
+         0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0x80050000}
+    };
+
+    // Полное обнуление
+    clear_decimal_bits(d.bits, BIG_DEC_BITS, 1);
+
+    for (int i = 0; i < 8; i++)
+        ck_assert_int_eq(d.bits[i], 0);
+}
+END_TEST
+
+/* -------------------- Новые тесты -------------------- */
+START_TEST(test_decimal_clear_zero) {
+    s21_decimal d = {{0,0,0,0}};
+    clear_decimal_bits(d.bits, DEC_BITS, 0);
+
+    for (int i = 0; i < 3; i++)
+        ck_assert_int_eq(d.bits[i], 0);
+
+    ck_assert_int_eq(get_sign(d.bits, DEC_BITS), 0);
+    ck_assert_int_eq(get_scale(d.bits, DEC_BITS), 0);
+}
+END_TEST
+
+START_TEST(test_big_decimal_clear_zero) {
+    s21_big_decimal d = {{0,0,0,0,0,0,0,0}};
+    clear_decimal_bits(d.bits, BIG_DEC_BITS, 0);
+
+    for (int i = 0; i < 7; i++)
+        ck_assert_int_eq(d.bits[i], 0);
+
+    ck_assert_int_eq(get_sign(d.bits, BIG_DEC_BITS), 0);
+    ck_assert_int_eq(get_scale(d.bits, BIG_DEC_BITS), 0);
 }
 END_TEST
 
@@ -173,8 +232,12 @@ Suite *decimal_helpers_suite(void) {
     tcase_add_test(tc_core, test_big_decimal_scale);
 
     /* clear_decimal_bits */
-    tcase_add_test(tc_core, test_decimal_clear);
-    tcase_add_test(tc_core, test_big_decimal_clear);
+    tcase_add_test(tc_core, test_decimal_clear_keep_metadata);
+    tcase_add_test(tc_core, test_decimal_clear_full);
+    tcase_add_test(tc_core, test_big_decimal_clear_keep_metadata);
+    tcase_add_test(tc_core, test_big_decimal_clear_full);
+    tcase_add_test(tc_core, test_decimal_clear_zero);
+    tcase_add_test(tc_core, test_big_decimal_clear_zero);
 
     suite_add_tcase(s, tc_core);
     return s;

@@ -52,9 +52,12 @@ void set_scale(uint32_t* bits, int size_in_bits, int scale) {
   bits[high] |= ((scale & 0xFF) << 16);
 }
 
-void clear_decimal_bits(uint32_t* bits, int size_in_bits) {
-  for (int i = 0; i < get_high_word_index(size_in_bits); i++) {
+void clear_decimal_bits(uint32_t* bits, int size_in_bits, int clear_metadata) {
+  int high = get_high_word_index(size_in_bits);
+  for (int i = 0; i < high; i++) {
     bits[i] = 0;
   }
+  if (clear_metadata) {
+    bits[high] = 0;
+  }
 }
-

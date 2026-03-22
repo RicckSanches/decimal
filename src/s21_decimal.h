@@ -2,6 +2,7 @@
 #define S21_DECIMAL_H
 
 #include <stdint.h>
+#include <limits.h>
 
 #define DEC_BITS 128
 #define BIG_DEC_BITS 256
@@ -54,15 +55,11 @@ int get_sign(const uint32_t* bits, int size_in_bits);
 void set_sign(uint32_t* bits, int size_in_bits, int sign);
 int get_scale(const uint32_t* bits, int size_in_bits);
 void set_scale(uint32_t* bits, int size_in_bits, int scale);
-void clear_decimal_bits(uint32_t* bits, int size_in_bits);
+void clear_decimal_bits(uint32_t* bits, int size_in_bits, int clear_metadata);
 
 // arithmetic_helpers
-int mantissa_fits_96(const s21_big_decimal* big);
-void big_decimal_multiply_by_10(s21_big_decimal* big);
-int big_decimal_divide_by_10(s21_big_decimal* big);
 void decimal_to_big_decimal(const s21_decimal* dec, s21_big_decimal* big);
 void normalize_big_decimals(s21_big_decimal* a, s21_big_decimal* b);
-void bank_round(s21_big_decimal *big, int remainder);
-void big_decimal_to_decimal(s21_big_decimal* big, s21_decimal* dec);
+int big_decimal_to_decimal(s21_big_decimal* big, s21_decimal* dec);
 
 #endif

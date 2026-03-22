@@ -1,11 +1,7 @@
-#include <string.h>
-#include <stdio.h>
 #include "s21_decimal.h"
+#include <stdio.h>
 
 
-int main() {
-    printf("Hello World\n");
+int main(void) {   
     return 0;
 }
-
-
