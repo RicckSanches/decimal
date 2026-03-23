@@ -4,6 +4,11 @@ static inline int get_mantissa_bits(int size_in_bits) {
   return size_in_bits - 32;
 }
 
+static inline int get_mantissa_word_count(int size_in_bits) {
+  int mantissa_bits = get_mantissa_bits(size_in_bits);
+  return (mantissa_bits + 31) / 32;
+}
+
 int get_bit(const uint32_t* bits, int size_in_bits, int index) {
   int res = 0;
   int mantissa = get_mantissa_bits(size_in_bits);
@@ -59,32 +64,57 @@ void clear_decimal_bits(uint32_t* bits, int size_in_bits, int clear_metadata) {
 }
 
 // Делим big_decimal на 10, возвращаем остаток 0..9
-int div10(uint32_t *bits, int size_in_bits) {
-    uint64_t remainder = 0;
+int div10(uint32_t* bits, int size_in_bits) {
+  uint64_t remainder = 0;
 
-    int high = get_high_word_index(size_in_bits);
+  int high = get_high_word_index(size_in_bits);
 
-    // идём по ВСЕЙ мантиссе (кроме metadata)
-    for (int i = high - 1; i >= 0; i--) {
-        uint64_t cur = (remainder << 32) | bits[i];
-        bits[i] = (uint32_t)(cur / 10);
-        remainder = cur % 10;
-    }
+  // идём по ВСЕЙ мантиссе (кроме metadata)
+  for (int i = high - 1; i >= 0; i--) {
+    uint64_t cur = (remainder << 32) | bits[i];
+    bits[i] = (uint32_t)(cur / 10);
+    remainder = cur % 10;
+  }
 
-    return (int)remainder;
+  return (int)remainder;
 }
 
 // Умножение big_decimal на 10 (для normalize)
-int mul10(uint32_t *bits, int size_in_bits) {
-    uint64_t carry = 0;
+int mul10(uint32_t* bits, int size_in_bits) {
+  uint64_t carry = 0;
 
-    int high = get_high_word_index(size_in_bits);
+  int high = get_high_word_index(size_in_bits);
 
-    for (int i = 0; i < high; i++) {
-        uint64_t cur = (uint64_t)bits[i] * 10 + carry;
-        bits[i] = (uint32_t)cur;
-        carry = cur >> 32;
-    }
+  for (int i = 0; i < high; i++) {
+    uint64_t cur = (uint64_t)bits[i] * 10 + carry;
+    bits[i] = (uint32_t)cur;
+    carry = cur >> 32;
+  }
 
-    return (carry != 0); // 1 если overflow
+  return (carry != 0);  // 1 если overflow
+}
+
+// Универсальная функция проверки округления
+// Универсальная проверка округления (для decimal и big_decimal)
+int should_round(int last_rem, int has_tail, const uint32_t* bits) {
+  if (last_rem > 5) return 1;
+  if (last_rem < 5) return 0;
+
+  // last_rem == 5
+  if (has_tail) return 1;
+
+  // round to even
+  return bits[0] & 1;
+}
+
+// Универсальное добавление 1 к мантиссе
+void add_one(uint32_t* bits, int size_in_bits) {
+  uint64_t carry = 1;
+  int word_count = get_mantissa_word_count(size_in_bits);
+
+  for (int i = 0; i < word_count && carry; i++) {
+    uint64_t sum = (uint64_t)bits[i] + carry;
+    bits[i] = (uint32_t)sum;
+    carry = sum >> 32;
+  }
 }

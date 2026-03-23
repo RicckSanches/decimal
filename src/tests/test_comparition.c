@@ -102,19 +102,20 @@ START_TEST(test_comparisons_large_numbers) {
 END_TEST
 
 START_TEST(test_compare_negatives) {
-    s21_decimal a = {{5, 0, 0, 0}};
-    s21_decimal b = {{3, 0, 0, 0}};
-    set_sign(a.bits, DEC_BITS, 1);
-    set_sign(b.bits, DEC_BITS, 1);
+  s21_decimal a = {{5, 0, 0, 0}};
+  s21_decimal b = {{3, 0, 0, 0}};
+  set_sign(a.bits, DEC_BITS, 1);
+  set_sign(b.bits, DEC_BITS, 1);
 
-    ck_assert_int_eq(s21_is_less(a, b), 1);    // -5 < -3
-    ck_assert_int_eq(s21_is_greater(a, b), 0);
-    ck_assert_int_eq(s21_is_less(b, a), 0);    // -3 < -5 -> false
-    ck_assert_int_eq(s21_is_greater(b, a), 1); // -3 > -5 -> true
+  ck_assert_int_eq(s21_is_less(a, b), 1);  // -5 < -3
+  ck_assert_int_eq(s21_is_greater(a, b), 0);
+  ck_assert_int_eq(s21_is_less(b, a), 0);     // -3 < -5 -> false
+  ck_assert_int_eq(s21_is_greater(b, a), 1);  // -3 > -5 -> true
 }
 END_TEST
 
-/* -------------------- Comparisons: additional edge cases -------------------- */
+/* -------------------- Comparisons: additional edge cases --------------------
+ */
 START_TEST(test_comparisons_zero_sign) {
   s21_decimal pos_zero = {{0, 0, 0, 0}};
   s21_decimal neg_zero = {{0, 0, 0, 0}};
@@ -148,8 +149,8 @@ START_TEST(test_comparisons_mixed_signs_scale) {
 START_TEST(test_comparisons_large_negative_numbers) {
   s21_decimal a = {{0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0}};  // большое число
   s21_decimal b = {{0xFFFFFFFE, 0xFFFFFFFF, 0xFFFFFFFF, 0}};  // чуть меньше
-  set_sign(a.bits, DEC_BITS, 1);  // a отрицательное
-  set_sign(b.bits, DEC_BITS, 1);  // b отрицательное
+  set_sign(a.bits, DEC_BITS, 1);                              // a отрицательное
+  set_sign(b.bits, DEC_BITS, 1);                              // b отрицательное
 
   // -a < -b → a меньше, т.к. |a| > |b|
   ck_assert_int_eq(s21_is_less(a, b), 1);
@@ -179,7 +180,7 @@ Suite* comparisons_suite(void) {
   tcase_add_test(tc, test_comparisons_with_scale);
   tcase_add_test(tc, test_comparisons_large_numbers);
   tcase_add_test(tc, test_compare_negatives);
-  
+
   tcase_add_test(tc, test_comparisons_zero_sign);
   tcase_add_test(tc, test_comparisons_mixed_signs_scale);
   tcase_add_test(tc, test_comparisons_large_negative_numbers);

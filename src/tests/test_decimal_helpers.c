@@ -315,6 +315,101 @@ START_TEST(test_mul10_cross_word) {
 }
 END_TEST
 
+// -------------------- should_round --------------------
+START_TEST(test_should_round_less_5) {
+  uint32_t bits[3] = {12, 0, 0};
+  ck_assert_int_eq(should_round(3, 0, bits),
+                   0);  // last_rem < 5 → не округляем
+}
+END_TEST
+
+START_TEST(test_should_round_greater_5) {
+  uint32_t bits[3] = {12, 0, 0};
+  ck_assert_int_eq(should_round(7, 0, bits),
+                   1);  // last_rem > 5 → округляем
+}
+END_TEST
+
+START_TEST(test_should_round_equal_5_no_tail_even) {
+  uint32_t bits[3] = {12, 0, 0};  // младший бит 0 → не округляем
+  ck_assert_int_eq(should_round(5, 0, bits), 0);
+}
+END_TEST
+
+START_TEST(test_should_round_equal_5_no_tail_odd) {
+  uint32_t bits[3] = {13, 0, 0};  // младший бит 1 → округляем
+  ck_assert_int_eq(should_round(5, 0, bits), 1);
+}
+END_TEST
+
+START_TEST(test_should_round_equal_5_with_tail) {
+  uint32_t bits[3] = {12, 0, 0};
+  ck_assert_int_eq(should_round(5, 1, bits), 1);
+}
+END_TEST
+
+START_TEST(test_should_round_big_decimal_even) {
+  uint32_t bits[8] = {0xFFFFFFFE, 0, 0, 0, 0, 0, 0, 0};
+  ck_assert_int_eq(should_round(5, 0, bits), 0);
+}
+END_TEST
+
+START_TEST(test_should_round_big_decimal_odd) {
+  uint32_t bits[8] = {0xFFFFFFFF, 0, 0, 0, 0, 0, 0, 0};
+  ck_assert_int_eq(should_round(5, 0, bits), 1);
+}
+END_TEST
+
+// -------------------- add_one --------------------
+START_TEST(test_add_one_simple) {
+  uint32_t bits[3] = {1, 0, 0};
+  add_one(bits, DEC_BITS);  // использует DEC_BITS вместо 96
+  ck_assert_uint_eq(bits[0], 2);
+  ck_assert_uint_eq(bits[1], 0);
+  ck_assert_uint_eq(bits[2], 0);
+}
+END_TEST
+
+START_TEST(test_add_one_with_carry) {
+  uint32_t bits[3] = {0xFFFFFFFF, 0, 0};
+  add_one(bits, DEC_BITS);
+  ck_assert_uint_eq(bits[0], 0);
+  ck_assert_uint_eq(bits[1], 1);
+  ck_assert_uint_eq(bits[2], 0);
+}
+END_TEST
+
+START_TEST(test_add_one_multiple_carry) {
+  uint32_t bits[3] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF};
+  add_one(bits, DEC_BITS);
+  ck_assert_uint_eq(bits[0], 0);
+  ck_assert_uint_eq(bits[1], 0);
+  ck_assert_uint_eq(bits[2], 0);
+}
+END_TEST
+
+START_TEST(test_add_one_no_overflow) {
+  uint32_t bits[3] = {123456, 0, 0};
+  add_one(bits, DEC_BITS);
+  ck_assert_uint_eq(bits[0], 123457);
+  ck_assert_uint_eq(bits[1], 0);
+  ck_assert_uint_eq(bits[2], 0);
+}
+END_TEST
+
+START_TEST(test_add_one_big_decimal) {
+  uint32_t bits[7] = {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFE, 0, 0, 0};
+  add_one(bits, BIG_DEC_BITS);  // использует BIG_DEC_BITS вместо 224
+  ck_assert_uint_eq(bits[0], 0);
+  ck_assert_uint_eq(bits[1], 0);
+  ck_assert_uint_eq(bits[2], 0);
+  ck_assert_uint_eq(bits[3], 0xFFFFFFFF);
+  ck_assert_uint_eq(bits[4], 0);
+  ck_assert_uint_eq(bits[5], 0);
+  ck_assert_uint_eq(bits[6], 0);
+}
+END_TEST
+
 /* ============================================================================
  * Suite
  * ==========================================================================*/
@@ -365,6 +460,22 @@ Suite* decimal_helpers_suite(void) {
   tcase_add_test(tc_core, test_mul10_big_decimal);
   tcase_add_test(tc_core, test_mul10_chain);
   tcase_add_test(tc_core, test_mul10_cross_word);
+
+  // should_round
+  tcase_add_test(tc_core, test_should_round_less_5);
+  tcase_add_test(tc_core, test_should_round_greater_5);
+  tcase_add_test(tc_core, test_should_round_equal_5_no_tail_even);
+  tcase_add_test(tc_core, test_should_round_equal_5_no_tail_odd);
+  tcase_add_test(tc_core, test_should_round_equal_5_with_tail);
+  tcase_add_test(tc_core, test_should_round_big_decimal_even);
+  tcase_add_test(tc_core, test_should_round_big_decimal_odd);
+
+  // add_one
+  tcase_add_test(tc_core, test_add_one_simple);
+  tcase_add_test(tc_core, test_add_one_with_carry);
+  tcase_add_test(tc_core, test_add_one_multiple_carry);
+  tcase_add_test(tc_core, test_add_one_no_overflow);
+  tcase_add_test(tc_core, test_add_one_big_decimal);
 
   suite_add_tcase(s, tc_core);
   return s;

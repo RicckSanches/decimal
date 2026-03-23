@@ -59,9 +59,10 @@ int s21_floor(s21_decimal value, s21_decimal* result) {
     }
     set_scale(result->bits, DEC_BITS, 0);
 
-    // Для отрицательных чисел с дробной частью делаем floor
+    // Для отрицательных чисел с дробной частью делаем floor (используем
+    // универсальный add_one)
     if (sign && has_fraction) {
-      s21_add_one(result);  // прибавление 1 учитывает перенос
+      add_one(result->bits, DEC_BITS);  // 3 слова для s21_decimal
     }
 
     err = 0;
@@ -84,17 +85,17 @@ int s21_round(s21_decimal value, s21_decimal* result) {
     while (scale > 0) {
       int rem = div10(result->bits, DEC_BITS);
 
-      if (scale == 1) {
+      if (scale == 1)
         last_rem = rem;
-      } else if (rem != 0) {
+      else if (rem != 0)
         has_tail = 1;
-      }
 
       scale--;
     }
 
-    if (s21_should_round(last_rem, has_tail, result)) {
-      s21_add_one(result);
+    // Используем универсальную функцию should_round и add_one
+    if (should_round(last_rem, has_tail, result->bits)) {
+      add_one(result->bits, DEC_BITS);  // 3 слова для s21_decimal
     }
 
     set_scale(result->bits, DEC_BITS, 0);

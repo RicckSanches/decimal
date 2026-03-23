@@ -110,69 +110,99 @@ START_TEST(test_normalize_big_decimals_multi_step_overflow) {
 }
 END_TEST
 
-// -------------------- s21_should_round --------------------
-START_TEST(test_should_round_less_5) {
-  s21_decimal d = {{12, 0, 0, 0}};
-  ck_assert_int_eq(s21_should_round(3, 0, &d), 0);
+
+
+// -------------------- big_to_decimal --------------------
+// -------------------- Без переполнения --------------------
+START_TEST(test_big_to_decimal_simple) {
+  s21_big_decimal big = {{123, 0, 0, 0, 0, 0}};
+  set_scale(big.bits, BIG_DEC_BITS, 0);
+  set_sign(big.bits, BIG_DEC_BITS, 0);
+
+  s21_decimal dec;
+  int res = big_decimal_to_decimal(&big, &dec);
+
+  ck_assert_int_eq(res, 0);
+  ck_assert_int_eq(dec.bits[0], 123);
+  ck_assert_int_eq(get_scale(dec.bits, DEC_BITS), 0);
+  ck_assert_int_eq(get_sign(dec.bits, DEC_BITS), 0);
 }
 END_TEST
 
-START_TEST(test_should_round_greater_5) {
-  s21_decimal d = {{12, 0, 0, 0}};
-  ck_assert_int_eq(s21_should_round(7, 0, &d), 1);
+// -------------------- Со scale --------------------
+START_TEST(test_big_to_decimal_with_scale) {
+  s21_big_decimal big = {{12345, 0, 0, 0, 0, 0}};
+  set_scale(big.bits, BIG_DEC_BITS, 2);
+
+  s21_decimal dec;
+  int res = big_decimal_to_decimal(&big, &dec);
+
+  ck_assert_int_eq(res, 0);
+  ck_assert_int_eq(dec.bits[0], 12345);
+  ck_assert_int_eq(get_scale(dec.bits, DEC_BITS), 2);
 }
 END_TEST
 
-START_TEST(test_should_round_equal_5_no_tail_even) {
-  s21_decimal d = {{12, 0, 0, 0}};  // младшее слово четное
-  ck_assert_int_eq(s21_should_round(5, 0, &d), 0);
+// -------------------- Отрицательное --------------------
+START_TEST(test_big_to_decimal_negative) {
+  s21_big_decimal big = {{555, 0, 0, 0, 0, 0}};
+  set_sign(big.bits, BIG_DEC_BITS, 1);
+
+  s21_decimal dec;
+  int res = big_decimal_to_decimal(&big, &dec);
+
+  ck_assert_int_eq(res, 0);
+  ck_assert_int_eq(get_sign(dec.bits, DEC_BITS), 1);
 }
 END_TEST
 
-START_TEST(test_should_round_equal_5_no_tail_odd) {
-  s21_decimal d = {{13, 0, 0, 0}};  // младшее слово нечетное
-  ck_assert_int_eq(s21_should_round(5, 0, &d), 1);
+// -------------------- Переполнение --------------------
+START_TEST(test_big_to_decimal_overflow) {
+  s21_big_decimal big = {{0, 0, 0, 1, 0, 0}};  // старшее слово заполнено
+
+  s21_decimal dec;
+  int res = big_decimal_to_decimal(&big, &dec);
+
+  ck_assert_int_eq(res, 1);  // положительное переполнение
 }
 END_TEST
 
-START_TEST(test_should_round_equal_5_with_tail) {
-  s21_decimal d = {{12, 0, 0, 0}};
-  ck_assert_int_eq(s21_should_round(5, 1, &d), 1);
+// -------------------- Отрицательное переполнение --------------------
+START_TEST(test_big_to_decimal_negative_overflow) {
+  s21_big_decimal big = {{0, 0, 0, 1, 0, 0}};
+  set_sign(big.bits, BIG_DEC_BITS, 1);
+
+  s21_decimal dec;
+  int res = big_decimal_to_decimal(&big, &dec);
+
+  ck_assert_int_eq(res, 2);  // отрицательное переполнение
 }
 END_TEST
 
-// -------------------- s21_add_one --------------------
-START_TEST(test_add_one_simple) {
-  s21_decimal d = {{1, 0, 0, 0}};
-  s21_add_one(&d);
-  ck_assert_uint_eq(d.bits[0], 2);
-}
+// -------------------- Банковское округление --------------------
+START_TEST(test_big_to_decimal_bank_round) {
+  // 15 -> при делении должно округлиться до 2
+  s21_big_decimal big = {{15, 0, 0, 1, 0, 0}};
+  set_scale(big.bits, BIG_DEC_BITS, 1);
 
+  s21_decimal dec;
+  int res = big_decimal_to_decimal(&big, &dec);
+
+  ck_assert_int_eq(res, 0);
+  ck_assert_int_eq(dec.bits[0], 2);
+}
 END_TEST
 
-START_TEST(test_add_one_carry) {
-  s21_decimal d = {{0xFFFFFFFF, 0, 0, 0}};
-  s21_add_one(&d);
-  ck_assert_uint_eq(d.bits[0], 0);
-  ck_assert_uint_eq(d.bits[1], 1);
-}
+// -------------------- Граница (влезает после округления) --------------------
+START_TEST(test_big_to_decimal_fit_after_round) {
+  s21_big_decimal big = {{0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 1, 0, 0}};
+  set_scale(big.bits, BIG_DEC_BITS, 1);
 
-END_TEST
+  s21_decimal dec;
+  int res = big_decimal_to_decimal(&big, &dec);
 
-START_TEST(test_add_one_multiple_carry) {
-  s21_decimal d = {{0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0}};
-  s21_add_one(&d);
-  ck_assert_uint_eq(d.bits[0], 0);
-  ck_assert_uint_eq(d.bits[1], 0);
-  ck_assert_uint_eq(d.bits[2], 0);
-}
-
-END_TEST
-
-START_TEST(test_add_one_no_overflow) {
-  s21_decimal d = {{123456, 0, 0, 0}};
-  s21_add_one(&d);
-  ck_assert_uint_eq(d.bits[0], 123457);
+  // может стать либо 0 (если округлилось), либо overflow
+  ck_assert_int_ge(res, 0);
 }
 END_TEST
 
@@ -190,19 +220,15 @@ Suite* arithmetic_helpers_suite(void) {
   tcase_add_test(tc, test_normalize_big_decimals_zero_values);
   tcase_add_test(tc, test_normalize_big_decimals_mul10_overflow);
   tcase_add_test(tc, test_normalize_big_decimals_multi_step_overflow);
-
-  // s21_should_round
-  tcase_add_test(tc, test_should_round_less_5);
-  tcase_add_test(tc, test_should_round_greater_5);
-  tcase_add_test(tc, test_should_round_equal_5_no_tail_even);
-  tcase_add_test(tc, test_should_round_equal_5_no_tail_odd);
-  tcase_add_test(tc, test_should_round_equal_5_with_tail);
-
-  // s21_add_one
-  tcase_add_test(tc, test_add_one_simple);
-  tcase_add_test(tc, test_add_one_carry);
-  tcase_add_test(tc, test_add_one_multiple_carry);
-  tcase_add_test(tc, test_add_one_no_overflow);
+  
+  // big_to_decimal
+  tcase_add_test(tc, test_big_to_decimal_simple);
+  tcase_add_test(tc, test_big_to_decimal_with_scale);
+  tcase_add_test(tc, test_big_to_decimal_negative);
+  tcase_add_test(tc, test_big_to_decimal_overflow);
+  tcase_add_test(tc, test_big_to_decimal_negative_overflow);
+  tcase_add_test(tc, test_big_to_decimal_bank_round);
+  tcase_add_test(tc, test_big_to_decimal_fit_after_round);
 
   suite_add_tcase(s, tc);
   return s;

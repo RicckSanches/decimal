@@ -1,7 +1,7 @@
 #include "../s21_decimal.h"
 
 // Сравнение Decimal через BigDecimal с нормализацией
-static int compare_decimals(const s21_decimal* a, const s21_decimal* b) {
+static int compare_decimals(s21_decimal* a, s21_decimal* b) {
   int result = 0;  // 0 — равны, -1 — a<b, 1 — a>b
 
   // Проверяем на ноль
