@@ -1,80 +1,189 @@
 #include <check.h>
+
 #include "../s21_decimal.h"
 
-/* -------------------- int -> decimal -------------------- */
-START_TEST(test_from_int_to_decimal_basic_positive) {
-    s21_decimal d = {{0}};
-    int err = s21_from_int_to_decimal(12345, &d);
+static int float_eq(float a, float b, float eps) {
+  float diff = a > b ? a - b : b - a;
+  return diff < eps;
+}
 
-    ck_assert_int_eq(err, 0);
-    ck_assert_uint_eq(d.bits[0], 12345);
-    ck_assert_int_eq(get_sign(d.bits, DEC_BITS), 0);
-    ck_assert_int_eq(get_scale(d.bits, DEC_BITS), 0);
+// -------------------- INT -> DECIMAL --------------------
+START_TEST(test_from_int_positive) {
+  s21_decimal dec;
+  int res = s21_from_int_to_decimal(12345, &dec);
+  ck_assert_int_eq(res, 0);
+  ck_assert_int_eq(get_sign(dec.bits, DEC_BITS), 0);
+  ck_assert_int_eq(dec.bits[0], 12345);
 }
 END_TEST
 
-START_TEST(test_from_int_to_decimal_basic_negative) {
-    s21_decimal d = {{0}};
-    int err = s21_from_int_to_decimal(-9876, &d);
-
-    ck_assert_int_eq(err, 0);
-    ck_assert_uint_eq(d.bits[0], 9876);
-    ck_assert_int_eq(get_sign(d.bits, DEC_BITS), 1);
-    ck_assert_int_eq(get_scale(d.bits, DEC_BITS), 0);
+START_TEST(test_from_int_negative) {
+  s21_decimal dec;
+  int res = s21_from_int_to_decimal(-98765, &dec);
+  ck_assert_int_eq(res, 0);
+  ck_assert_int_eq(get_sign(dec.bits, DEC_BITS), 1);
+  ck_assert_int_eq(dec.bits[0], 98765);
 }
 END_TEST
 
-START_TEST(test_from_int_to_decimal_zero) {
-    s21_decimal d = {{0}};
-    int err = s21_from_int_to_decimal(0, &d);
-
-    ck_assert_int_eq(err, 0);
-    ck_assert_uint_eq(d.bits[0], 0);
-    ck_assert_int_eq(get_sign(d.bits, DEC_BITS), 0);
-    ck_assert_int_eq(get_scale(d.bits, DEC_BITS), 0);
+START_TEST(test_from_int_zero) {
+  s21_decimal dec;
+  int res = s21_from_int_to_decimal(0, &dec);
+  ck_assert_int_eq(res, 0);
+  ck_assert_int_eq(dec.bits[0], 0);
 }
 END_TEST
 
-START_TEST(test_from_int_to_decimal_max_int) {
-    s21_decimal d = {{0}};
-    int err = s21_from_int_to_decimal(INT_MAX, &d);
+START_TEST(test_from_int_max_min) {
+  s21_decimal dec;
+  int res = s21_from_int_to_decimal(INT32_MAX, &dec);
+  ck_assert_int_eq(res, 0);
+  ck_assert_int_eq(dec.bits[0], INT32_MAX);
 
-    ck_assert_int_eq(err, 0);
-    ck_assert_uint_eq(d.bits[0], (unsigned int)INT_MAX);
-    ck_assert_int_eq(get_sign(d.bits, DEC_BITS), 0);
-    ck_assert_int_eq(get_scale(d.bits, DEC_BITS), 0);
+  res = s21_from_int_to_decimal(INT32_MIN, &dec);
+  ck_assert_int_eq(res, 0);
+  ck_assert_int_eq(dec.bits[0], 2147483648U);
+  ck_assert_int_eq(get_sign(dec.bits, DEC_BITS), 1);
 }
 END_TEST
 
-START_TEST(test_from_int_to_decimal_min_int) {
-    s21_decimal d = {{0}};
-    int err = s21_from_int_to_decimal(INT_MIN, &d);
-
-    ck_assert_int_eq(err, 0);
-    ck_assert_uint_eq(d.bits[0], (unsigned int)(-(long long)INT_MIN));
-    ck_assert_int_eq(get_sign(d.bits, DEC_BITS), 1);
-    ck_assert_int_eq(get_scale(d.bits, DEC_BITS), 0);
+START_TEST(test_from_int_null_pointer) {
+  int res = s21_from_int_to_decimal(100, NULL);
+  ck_assert_int_eq(res, 1);
 }
 END_TEST
 
-START_TEST(test_from_int_to_decimal_null_pointer) {
-    int err = s21_from_int_to_decimal(42, NULL);
-    ck_assert_int_eq(err, 1);  // должен вернуть ошибку
+// -------------------- FLOAT -> DECIMAL --------------------
+START_TEST(test_from_float_basic) {
+  s21_decimal dec;
+  float src = 123.456f;
+  int res = s21_from_float_to_decimal(src, &dec);
+  ck_assert_int_eq(res, 0);
+  float f;
+  s21_from_decimal_to_float(dec, &f);
+  ck_assert(float_eq(f, src, 1e-3f));
 }
 END_TEST
 
-/* -------------------- Suite -------------------- */
+START_TEST(test_from_float_negative_zero_overflow) {
+  s21_decimal dec;
+  int res;
+
+  res = s21_from_float_to_decimal(-0.789f, &dec);
+  ck_assert_int_eq(res, 0);
+
+  res = s21_from_float_to_decimal(0.0f, &dec);
+  ck_assert_int_eq(res, 0);
+
+  res = s21_from_float_to_decimal(5e9f, &dec);  // > 0xFFFFFFFF
+  ck_assert_int_eq(res, 1);
+}
+END_TEST
+
+START_TEST(test_from_float_small_fraction) {
+  s21_decimal dec;
+  float src = 0.000123f;
+  int res = s21_from_float_to_decimal(src, &dec);
+  ck_assert_int_eq(res, 0);
+  float f;
+  s21_from_decimal_to_float(dec, &f);
+  ck_assert(float_eq(f, src, 1e-6f));
+}
+END_TEST
+
+// -------------------- DECIMAL -> INT --------------------
+START_TEST(test_decimal_to_int_basic) {
+  s21_decimal dec;
+  int i, res;
+
+  s21_from_int_to_decimal(100, &dec);
+  res = s21_from_decimal_to_int(dec, &i);
+  ck_assert_int_eq(res, 0);
+  ck_assert_int_eq(i, 100);
+
+  s21_from_int_to_decimal(-100, &dec);
+  res = s21_from_decimal_to_int(dec, &i);
+  ck_assert_int_eq(res, 0);
+  ck_assert_int_eq(i, -100);
+
+  s21_from_float_to_decimal(123.987f, &dec);
+  res = s21_from_decimal_to_int(dec, &i);
+  ck_assert_int_eq(res, 0);
+  ck_assert_int_eq(i, 123);  // дробная часть отбрасывается
+}
+END_TEST
+
+START_TEST(test_decimal_to_int_null_overflow) {
+  s21_decimal dec;
+  int i, res;
+
+  s21_from_int_to_decimal(123, &dec);
+  res = s21_from_decimal_to_int(dec, NULL);
+  ck_assert_int_eq(res, 1);  // NULL
+
+  s21_from_int_to_decimal(INT32_MAX, &dec);
+  dec.bits[0] += 1;  // искусственно создаем переполнение
+  res = s21_from_decimal_to_int(dec, &i);
+  ck_assert_int_eq(res, 1);
+}
+END_TEST
+
+// -------------------- DECIMAL -> FLOAT --------------------
+START_TEST(test_decimal_to_float_basic) {
+  s21_decimal dec;
+  float f;
+  int res;
+
+  s21_from_float_to_decimal(3.14159f, &dec);
+  res = s21_from_decimal_to_float(dec, &f);
+  ck_assert_int_eq(res, 0);
+  ck_assert(float_eq(f, 3.14159f, 1e-5f));
+
+  s21_from_float_to_decimal(-2.71828f, &dec);
+  res = s21_from_decimal_to_float(dec, &f);
+  ck_assert_int_eq(res, 0);
+  ck_assert(float_eq(f, -2.71828f, 1e-5f));
+
+  s21_from_float_to_decimal(0.0f, &dec);
+  res = s21_from_decimal_to_float(dec, &f);
+  ck_assert_int_eq(res, 0);
+  ck_assert(fabs(f) < 1e-7f);
+}
+END_TEST
+
+START_TEST(test_decimal_to_float_null) {
+  s21_decimal dec;
+  s21_from_float_to_decimal(1.23f, &dec);
+  int res = s21_from_decimal_to_float(dec, NULL);
+  ck_assert_int_eq(res, 1);
+}
+END_TEST
+
+// -------------------- Suite --------------------
 Suite* conversion_suite(void) {
-    Suite* s = suite_create("int -> s21_decimal");
-    TCase* tc = tcase_create("Core");
+  Suite* s = suite_create("Decimal Conversion");
+  TCase* tc = tcase_create("Core");
 
-    tcase_add_test(tc, test_from_int_to_decimal_basic_positive);
-    tcase_add_test(tc, test_from_int_to_decimal_basic_negative);
-    tcase_add_test(tc, test_from_int_to_decimal_zero);
-    tcase_add_test(tc, test_from_int_to_decimal_max_int);
-    tcase_add_test(tc, test_from_int_to_decimal_min_int);
-    tcase_add_test(tc, test_from_int_to_decimal_null_pointer);
+  // int -> decimal
+  tcase_add_test(tc, test_from_int_positive);
+  tcase_add_test(tc, test_from_int_negative);
+  tcase_add_test(tc, test_from_int_zero);
+  tcase_add_test(tc, test_from_int_max_min);
+  tcase_add_test(tc, test_from_int_null_pointer);
 
-    suite_add_tcase(s, tc);
-    return s;
+  // float -> decimal
+  tcase_add_test(tc, test_from_float_basic);
+  tcase_add_test(tc, test_from_float_negative_zero_overflow);
+  tcase_add_test(tc, test_from_float_small_fraction);
+
+  // decimal -> int
+  tcase_add_test(tc, test_decimal_to_int_basic);
+  tcase_add_test(tc, test_decimal_to_int_null_overflow);
+
+  // decimal -> float
+  tcase_add_test(tc, test_decimal_to_float_basic);
+  tcase_add_test(tc, test_decimal_to_float_null);
+
+  suite_add_tcase(s, tc);
+  return s;
 }

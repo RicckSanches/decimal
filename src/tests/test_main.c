@@ -24,7 +24,8 @@ int main(void) {
   {
     SRunner* sr = srunner_create(decimal_utils_suite());
     printf(
-        "\n=== Running Decimal Utils Tests (truncate/negate/floor/round) ===\n");
+        "\n=== Running Decimal Utils Tests (truncate/negate/floor/round) "
+        "===\n");
     srunner_run_all(sr, CK_VERBOSE);
     int failed = srunner_ntests_failed(sr);
     printf("=== Decimal Utils: %d test(s) failed ===\n", failed);

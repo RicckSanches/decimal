@@ -41,24 +41,27 @@ int s21_floor(s21_decimal value, s21_decimal* result) {
     int scale = get_scale(value.bits, DEC_BITS);
     int sign = get_sign(value.bits, DEC_BITS);
 
-    // Сохраняем оригинальное значение младшего слова
-    uint32_t orig_lo = value.bits[0];
+    int has_fraction = 0;
+    s21_decimal temp = value;
 
-    // Отбрасываем дробную часть
+    // Проверяем, есть ли дробная часть
+    int temp_scale = scale;
+    while (temp_scale > 0) {
+      int rem = div10(temp.bits, DEC_BITS);
+      if (rem != 0) has_fraction = 1;
+      temp_scale--;
+    }
+
+    // Отбрасываем дробную часть в result
     while (scale > 0) {
       div10(result->bits, DEC_BITS);
       scale--;
     }
     set_scale(result->bits, DEC_BITS, 0);
 
-    // Если отрицательное и была дробная часть, добавляем +1
-    if (sign && orig_lo != result->bits[0]) {
-      uint64_t carry = 1;
-      for (int i = 0; i < 3 && carry; i++) {
-        uint64_t sum = (uint64_t)result->bits[i] + carry;
-        result->bits[i] = (uint32_t)sum;
-        carry = sum >> 32;
-      }
+    // Для отрицательных чисел с дробной частью делаем floor
+    if (sign && has_fraction) {
+      s21_add_one(result);  // прибавление 1 учитывает перенос
     }
 
     err = 0;
@@ -73,23 +76,25 @@ int s21_round(s21_decimal value, s21_decimal* result) {
 
   if (result) {
     *result = value;
+
     int scale = get_scale(value.bits, DEC_BITS);
     int last_rem = 0;
+    int has_tail = 0;
 
-    // Отбрасываем дробную часть, запоминая остаток
     while (scale > 0) {
-      last_rem = div10(result->bits, DEC_BITS);
+      int rem = div10(result->bits, DEC_BITS);
+
+      if (scale == 1) {
+        last_rem = rem;
+      } else if (rem != 0) {
+        has_tail = 1;
+      }
+
       scale--;
     }
 
-    // Если остаток ≥5, округляем вверх
-    if (last_rem >= 5) {
-      uint64_t carry = 1;
-      for (int i = 0; i < 3 && carry; i++) {
-        uint64_t sum = (uint64_t)result->bits[i] + carry;
-        result->bits[i] = (uint32_t)sum;
-        carry = sum >> 32;
-      }
+    if (s21_should_round(last_rem, has_tail, result)) {
+      s21_add_one(result);
     }
 
     set_scale(result->bits, DEC_BITS, 0);

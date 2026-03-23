@@ -1,8 +1,8 @@
 #ifndef S21_DECIMAL_H
 #define S21_DECIMAL_H
 
-#include <stdint.h>
 #include <limits.h>
+#include <stdint.h>
 
 #define DEC_BITS 128
 #define BIG_DEC_BITS 256
@@ -56,13 +56,14 @@ void set_sign(uint32_t* bits, int size_in_bits, int sign);
 int get_scale(const uint32_t* bits, int size_in_bits);
 void set_scale(uint32_t* bits, int size_in_bits, int scale);
 void clear_decimal_bits(uint32_t* bits, int size_in_bits, int clear_metadata);
-int div10(uint32_t *bits, int size_in_bits);
-int mul10(uint32_t *bits, int size_in_bits);
-
+int div10(uint32_t* bits, int size_in_bits);
+int mul10(uint32_t* bits, int size_in_bits);
 
 // arithmetic_helpers
 void decimal_to_big_decimal(const s21_decimal* dec, s21_big_decimal* big);
 void normalize_big_decimals(s21_big_decimal* a, s21_big_decimal* b);
 int big_decimal_to_decimal(s21_big_decimal* big, s21_decimal* dec);
+int s21_should_round(int last_rem, int has_tail, s21_decimal* value);
+void s21_add_one(s21_decimal* value);
 
 #endif

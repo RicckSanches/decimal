@@ -51,6 +51,72 @@ START_TEST(test_normalize_big_decimals_scale_b_smaller) {
 }
 END_TEST
 
+// -------------------- s21_should_round --------------------
+START_TEST(test_should_round_less_5) {
+  s21_decimal d = {{12, 0, 0, 0}};
+  ck_assert_int_eq(s21_should_round(3, 0, &d), 0);
+}
+END_TEST
+
+START_TEST(test_should_round_greater_5) {
+  s21_decimal d = {{12, 0, 0, 0}};
+  ck_assert_int_eq(s21_should_round(7, 0, &d), 1);
+}
+END_TEST
+
+START_TEST(test_should_round_equal_5_no_tail_even) {
+  s21_decimal d = {{12, 0, 0, 0}};  // младшее слово четное
+  ck_assert_int_eq(s21_should_round(5, 0, &d), 0);
+}
+END_TEST
+
+START_TEST(test_should_round_equal_5_no_tail_odd) {
+  s21_decimal d = {{13, 0, 0, 0}};  // младшее слово нечетное
+  ck_assert_int_eq(s21_should_round(5, 0, &d), 1);
+}
+END_TEST
+
+START_TEST(test_should_round_equal_5_with_tail) {
+  s21_decimal d = {{12, 0, 0, 0}};
+  ck_assert_int_eq(s21_should_round(5, 1, &d), 1);
+}
+END_TEST
+
+// -------------------- s21_add_one --------------------
+START_TEST(test_add_one_simple) {
+  s21_decimal d = {{1, 0, 0, 0}};
+  s21_add_one(&d);
+  ck_assert_uint_eq(d.bits[0], 2);
+}
+
+END_TEST
+
+START_TEST(test_add_one_carry) {
+  s21_decimal d = {{0xFFFFFFFF, 0, 0, 0}};
+  s21_add_one(&d);
+  ck_assert_uint_eq(d.bits[0], 0);
+  ck_assert_uint_eq(d.bits[1], 1);
+}
+
+END_TEST
+
+START_TEST(test_add_one_multiple_carry) {
+  s21_decimal d = {{0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0}};
+  s21_add_one(&d);
+  ck_assert_uint_eq(d.bits[0], 0);
+  ck_assert_uint_eq(d.bits[1], 0);
+  ck_assert_uint_eq(d.bits[2], 0);
+}
+
+END_TEST
+
+START_TEST(test_add_one_no_overflow) {
+  s21_decimal d = {{123456, 0, 0, 0}};
+  s21_add_one(&d);
+  ck_assert_uint_eq(d.bits[0], 123457);
+}
+END_TEST
+
 Suite* arithmetic_helpers_suite(void) {
   Suite* s = suite_create("Decimal <-> BigDecimal");
   TCase* tc = tcase_create("Core");
@@ -61,6 +127,19 @@ Suite* arithmetic_helpers_suite(void) {
   /* Normalize */
   tcase_add_test(tc, test_normalize_big_decimals_scales_equalized_edge);
   tcase_add_test(tc, test_normalize_big_decimals_scale_b_smaller);
+
+  // s21_should_round
+  tcase_add_test(tc, test_should_round_less_5);
+  tcase_add_test(tc, test_should_round_greater_5);
+  tcase_add_test(tc, test_should_round_equal_5_no_tail_even);
+  tcase_add_test(tc, test_should_round_equal_5_no_tail_odd);
+  tcase_add_test(tc, test_should_round_equal_5_with_tail);
+
+  // s21_add_one
+  tcase_add_test(tc, test_add_one_simple);
+  tcase_add_test(tc, test_add_one_carry);
+  tcase_add_test(tc, test_add_one_multiple_carry);
+  tcase_add_test(tc, test_add_one_no_overflow);
 
   suite_add_tcase(s, tc);
   return s;
