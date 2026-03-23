@@ -1,34 +1,5 @@
 #include "../s21_decimal.h"
 
-// Приведение scale и знака двух big_decimal
-void normalize_big_decimals(s21_big_decimal* a, s21_big_decimal* b) {
-  int scale_a = get_scale(a->bits, BIG_DEC_BITS);
-  int scale_b = get_scale(b->bits, BIG_DEC_BITS);
-
-  while (scale_a < scale_b) {
-    if (mul10(a->bits, BIG_DEC_BITS)) {
-      // overflow → уменьшаем b
-      div10(b->bits, BIG_DEC_BITS);
-      scale_b--;
-    } else {
-      scale_a++;
-    }
-  }
-
-  while (scale_b < scale_a) {
-    if (mul10(b->bits, BIG_DEC_BITS)) {
-      // overflow → уменьшаем a
-      div10(a->bits, BIG_DEC_BITS);
-      scale_a--;
-    } else {
-      scale_b++;
-    }
-  }
-
-  set_scale(a->bits, BIG_DEC_BITS, scale_a);
-  set_scale(b->bits, BIG_DEC_BITS, scale_b);
-}
-
 // Конвертация s21_decimal -> s21_big_decimal
 void decimal_to_big_decimal(const s21_decimal* dec, s21_big_decimal* big) {
   for (int i = 0; i < 8; i++) big->bits[i] = 0;
@@ -36,6 +7,35 @@ void decimal_to_big_decimal(const s21_decimal* dec, s21_big_decimal* big) {
   set_sign(big->bits, BIG_DEC_BITS, get_sign(dec->bits, DEC_BITS));
   set_scale(big->bits, BIG_DEC_BITS, get_scale(dec->bits, DEC_BITS));
 }
+
+int is_zero(const uint32_t* bits, int size_in_bits) {
+    int high = get_high_word_index(size_in_bits);
+    for (int i = 0; i < high; i++) {
+        if (bits[i] != 0) return 0;  // ненулевой бит найден → число не ноль
+    }
+    return 1;  // все биты мантиссы нули → число ноль
+}
+
+// Приведение scale и знака двух big_decimal
+void normalize_big_decimals(s21_big_decimal* a, s21_big_decimal* b) {
+    int scale_a = get_scale(a->bits, BIG_DEC_BITS);
+    int scale_b = get_scale(b->bits, BIG_DEC_BITS);
+
+    // если одно число 0, просто копируем scale
+    if (is_zero(a->bits, BIG_DEC_BITS)) scale_a = scale_b;
+    if (is_zero(b->bits, BIG_DEC_BITS)) scale_b = scale_a;
+
+    // увеличиваем scale_a до scale_b, пока не переполним a
+    while (scale_a < scale_b && !mul10(a->bits, BIG_DEC_BITS)) scale_a++;
+
+    // увеличиваем scale_b до scale_a, пока не переполним b
+    while (scale_b < scale_a && !mul10(b->bits, BIG_DEC_BITS)) scale_b++;
+
+    // сохраняем обновленные scale
+    set_scale(a->bits, BIG_DEC_BITS, scale_a);
+    set_scale(b->bits, BIG_DEC_BITS, scale_b);
+}
+
 
 int s21_should_round(int last_rem, int has_tail, s21_decimal* value) {
   int need_round = 0;

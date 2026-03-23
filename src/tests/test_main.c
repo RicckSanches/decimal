@@ -5,6 +5,7 @@ Suite* decimal_helpers_suite(void);
 Suite* decimal_utils_suite(void);
 Suite* conversion_suite(void);
 Suite* arithmetic_helpers_suite(void);
+Suite* comparisons_suite(void);  // добавляем новый suite
 
 int main(void) {
   int failed_total = 0;
@@ -23,9 +24,7 @@ int main(void) {
   // -------------------- Decimal Utils Functions --------------------
   {
     SRunner* sr = srunner_create(decimal_utils_suite());
-    printf(
-        "\n=== Running Decimal Utils Tests (truncate/negate/floor/round) "
-        "===\n");
+    printf("\n=== Running Decimal Utils Tests (truncate/negate/floor/round) ===\n");
     srunner_run_all(sr, CK_VERBOSE);
     int failed = srunner_ntests_failed(sr);
     printf("=== Decimal Utils: %d test(s) failed ===\n", failed);
@@ -51,6 +50,17 @@ int main(void) {
     srunner_run_all(sr, CK_VERBOSE);
     int failed = srunner_ntests_failed(sr);
     printf("=== Arithmetic Helpers: %d test(s) failed ===\n", failed);
+    srunner_free(sr);
+    failed_total += failed;
+  }
+
+  // -------------------- Decimal Comparisons --------------------
+  {
+    SRunner* sr = srunner_create(comparisons_suite());
+    printf("\n=== Running Decimal Comparisons Tests ===\n");
+    srunner_run_all(sr, CK_VERBOSE);
+    int failed = srunner_ntests_failed(sr);
+    printf("=== Decimal Comparisons: %d test(s) failed ===\n", failed);
     srunner_free(sr);
     failed_total += failed;
   }

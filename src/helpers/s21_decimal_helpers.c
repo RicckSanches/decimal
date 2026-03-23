@@ -1,9 +1,5 @@
 #include "../s21_decimal.h"
 
-static inline int get_high_word_index(int size_in_bits) {
-  return size_in_bits / 32 - 1;
-}
-
 static inline int get_mantissa_bits(int size_in_bits) {
   return size_in_bits - 32;
 }

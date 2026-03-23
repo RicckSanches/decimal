@@ -42,12 +42,71 @@ START_TEST(test_normalize_big_decimals_scale_b_smaller) {
   s21_big_decimal b = {{1, 0, 0, 0, 0, 0, 0, 0}};
   set_scale(a.bits, BIG_DEC_BITS, 3);
   set_scale(b.bits, BIG_DEC_BITS, 1);
-
   normalize_big_decimals(&a, &b);
-
   ck_assert_int_eq(get_scale(a.bits, BIG_DEC_BITS), 3);
   ck_assert_int_eq(get_scale(b.bits, BIG_DEC_BITS), 3);
   ck_assert_uint_eq(b.bits[0], 100);  // b = 1 * 10^2
+}
+END_TEST
+
+START_TEST(test_normalize_big_decimals_already_equal) {
+  s21_big_decimal a = {{5, 0, 0, 0, 0, 0, 0, 0}};
+  s21_big_decimal b = {{10, 0, 0, 0, 0, 0, 0, 0}};
+  set_scale(a.bits, BIG_DEC_BITS, 3);
+  set_scale(b.bits, BIG_DEC_BITS, 3);
+  normalize_big_decimals(&a, &b);
+  ck_assert_int_eq(get_scale(a.bits, BIG_DEC_BITS), 3);
+  ck_assert_int_eq(get_scale(b.bits, BIG_DEC_BITS), 3);
+  ck_assert_uint_eq(a.bits[0], 5);
+  ck_assert_uint_eq(b.bits[0], 10);
+}
+END_TEST
+
+START_TEST(test_normalize_big_decimals_zero_values) {
+  s21_big_decimal a = {{0}};
+  s21_big_decimal b = {{0}};
+  set_scale(a.bits, BIG_DEC_BITS, 5);
+  set_scale(b.bits, BIG_DEC_BITS, 2);
+  normalize_big_decimals(&a, &b);
+  ck_assert_int_eq(get_scale(a.bits, BIG_DEC_BITS),
+                   get_scale(b.bits, BIG_DEC_BITS));
+  ck_assert_uint_eq(a.bits[0], 0);
+  ck_assert_uint_eq(b.bits[0], 0);
+}
+END_TEST
+
+START_TEST(test_normalize_big_decimals_mul10_overflow) {
+  s21_big_decimal a = {{0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0, 0, 0, 0, 0}};
+  s21_big_decimal b = {{1, 0, 0, 0, 0, 0, 0, 0}};
+  set_scale(a.bits, BIG_DEC_BITS, 0);
+  set_scale(b.bits, BIG_DEC_BITS, 2);
+
+  normalize_big_decimals(&a, &b);
+
+  // Проверяем, что scale выровнялись, а переполнение обработано
+  ck_assert_int_eq(get_scale(a.bits, BIG_DEC_BITS),
+                   get_scale(b.bits, BIG_DEC_BITS));
+}
+END_TEST
+
+START_TEST(test_normalize_big_decimals_multi_step_overflow) {
+  s21_big_decimal a = {{0xFFFFFFF0, 0xFFFFFFF0, 0xFFFFFFF0, 0, 0, 0, 0, 0}};
+  s21_big_decimal b = {{1, 0, 0, 0, 0, 0, 0, 0}};
+
+  set_scale(a.bits, BIG_DEC_BITS, 0);
+  set_scale(b.bits, BIG_DEC_BITS, 5);
+
+  normalize_big_decimals(&a, &b);
+
+  // Проверяем, что scale теперь равны
+  int scale_a = get_scale(a.bits, BIG_DEC_BITS);
+  int scale_b = get_scale(b.bits, BIG_DEC_BITS);
+  ck_assert_int_eq(scale_a, scale_b);
+
+  // Проверяем, что значения не потеряны (a должно быть максимально близким к
+  // переполнению)
+  ck_assert_uint_gt(a.bits[0], 0);
+  ck_assert_uint_eq(b.bits[0], 1);  // b может быть уменьшено, но не до нуля
 }
 END_TEST
 
@@ -127,6 +186,10 @@ Suite* arithmetic_helpers_suite(void) {
   /* Normalize */
   tcase_add_test(tc, test_normalize_big_decimals_scales_equalized_edge);
   tcase_add_test(tc, test_normalize_big_decimals_scale_b_smaller);
+  tcase_add_test(tc, test_normalize_big_decimals_already_equal);
+  tcase_add_test(tc, test_normalize_big_decimals_zero_values);
+  tcase_add_test(tc, test_normalize_big_decimals_mul10_overflow);
+  tcase_add_test(tc, test_normalize_big_decimals_multi_step_overflow);
 
   // s21_should_round
   tcase_add_test(tc, test_should_round_less_5);
