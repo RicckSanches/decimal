@@ -5,7 +5,9 @@ Suite* decimal_helpers_suite(void);
 Suite* decimal_utils_suite(void);
 Suite* conversion_suite(void);
 Suite* arithmetic_helpers_suite(void);
-Suite* comparisons_suite(void);  // добавляем новый suite
+Suite* comparisons_suite(void);
+Suite* arithmetic_suite(void);
+Suite* integrated_conversion_suite(void);  // <- новый интеграционный сьют
 
 int main(void) {
   int failed_total = 0;
@@ -24,7 +26,9 @@ int main(void) {
   // -------------------- Decimal Utils Functions --------------------
   {
     SRunner* sr = srunner_create(decimal_utils_suite());
-    printf("\n=== Running Decimal Utils Tests (truncate/negate/floor/round) ===\n");
+    printf(
+        "\n=== Running Decimal Utils Tests (truncate/negate/floor/round) "
+        "===\n");
     srunner_run_all(sr, CK_VERBOSE);
     int failed = srunner_ntests_failed(sr);
     printf("=== Decimal Utils: %d test(s) failed ===\n", failed);
@@ -61,6 +65,31 @@ int main(void) {
     srunner_run_all(sr, CK_VERBOSE);
     int failed = srunner_ntests_failed(sr);
     printf("=== Decimal Comparisons: %d test(s) failed ===\n", failed);
+    srunner_free(sr);
+    failed_total += failed;
+  }
+
+  // -------------------- Decimal Arithmetic Operations --------------------
+  {
+    SRunner* sr = srunner_create(arithmetic_suite());
+    printf(
+        "\n=== Running Decimal Arithmetic Operations Tests (add/sub/mul/div) "
+        "===\n");
+    srunner_run_all(sr, CK_VERBOSE);
+    int failed = srunner_ntests_failed(sr);
+    printf("=== Arithmetic Operations: %d test(s) failed ===\n", failed);
+    srunner_free(sr);
+    failed_total += failed;
+  }
+
+  // -------------------- Integrated Conversion + Arithmetic Tests
+  // --------------------
+  {
+    SRunner* sr = srunner_create(integrated_conversion_suite());
+    printf("\n=== Running Integrated Conversion + Arithmetic Tests ===\n");
+    srunner_run_all(sr, CK_VERBOSE);
+    int failed = srunner_ntests_failed(sr);
+    printf("=== Integrated Tests: %d test(s) failed ===\n", failed);
     srunner_free(sr);
     failed_total += failed;
   }

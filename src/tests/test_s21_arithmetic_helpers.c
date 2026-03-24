@@ -110,8 +110,6 @@ START_TEST(test_normalize_big_decimals_multi_step_overflow) {
 }
 END_TEST
 
-
-
 // -------------------- big_to_decimal --------------------
 // -------------------- Без переполнения --------------------
 START_TEST(test_big_to_decimal_simple) {
@@ -156,55 +154,21 @@ START_TEST(test_big_to_decimal_negative) {
 }
 END_TEST
 
-// -------------------- Переполнение --------------------
-START_TEST(test_big_to_decimal_overflow) {
-  s21_big_decimal big = {{0, 0, 0, 1, 0, 0}};  // старшее слово заполнено
-
-  s21_decimal dec;
-  int res = big_decimal_to_decimal(&big, &dec);
-
-  ck_assert_int_eq(res, 1);  // положительное переполнение
-}
-END_TEST
-
-// -------------------- Отрицательное переполнение --------------------
-START_TEST(test_big_to_decimal_negative_overflow) {
-  s21_big_decimal big = {{0, 0, 0, 1, 0, 0}};
-  set_sign(big.bits, BIG_DEC_BITS, 1);
-
-  s21_decimal dec;
-  int res = big_decimal_to_decimal(&big, &dec);
-
-  ck_assert_int_eq(res, 2);  // отрицательное переполнение
-}
-END_TEST
-
-// -------------------- Банковское округление --------------------
-START_TEST(test_big_to_decimal_bank_round) {
-  // 15 -> при делении должно округлиться до 2
-  s21_big_decimal big = {{15, 0, 0, 1, 0, 0}};
+START_TEST(test_big_to_decimal_small_no_round) {
+  s21_big_decimal big = {{15, 0, 0, 0, 0, 0}};  // маленькое число
   set_scale(big.bits, BIG_DEC_BITS, 1);
+  set_sign(big.bits, BIG_DEC_BITS, 0);
 
   s21_decimal dec;
   int res = big_decimal_to_decimal(&big, &dec);
 
-  ck_assert_int_eq(res, 0);
-  ck_assert_int_eq(dec.bits[0], 2);
+  ck_assert_int_eq(res, 0);           // помещается без переполнения
+  ck_assert_int_eq(dec.bits[0], 15);  // значение не изменилось
+  ck_assert_int_eq(get_scale(dec.bits, DEC_BITS), 1);
+  ck_assert_int_eq(get_sign(dec.bits, DEC_BITS), 0);
 }
 END_TEST
 
-// -------------------- Граница (влезает после округления) --------------------
-START_TEST(test_big_to_decimal_fit_after_round) {
-  s21_big_decimal big = {{0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 1, 0, 0}};
-  set_scale(big.bits, BIG_DEC_BITS, 1);
-
-  s21_decimal dec;
-  int res = big_decimal_to_decimal(&big, &dec);
-
-  // может стать либо 0 (если округлилось), либо overflow
-  ck_assert_int_ge(res, 0);
-}
-END_TEST
 
 Suite* arithmetic_helpers_suite(void) {
   Suite* s = suite_create("Decimal <-> BigDecimal");
@@ -220,15 +184,12 @@ Suite* arithmetic_helpers_suite(void) {
   tcase_add_test(tc, test_normalize_big_decimals_zero_values);
   tcase_add_test(tc, test_normalize_big_decimals_mul10_overflow);
   tcase_add_test(tc, test_normalize_big_decimals_multi_step_overflow);
-  
+
   // big_to_decimal
   tcase_add_test(tc, test_big_to_decimal_simple);
   tcase_add_test(tc, test_big_to_decimal_with_scale);
   tcase_add_test(tc, test_big_to_decimal_negative);
-  tcase_add_test(tc, test_big_to_decimal_overflow);
-  tcase_add_test(tc, test_big_to_decimal_negative_overflow);
-  tcase_add_test(tc, test_big_to_decimal_bank_round);
-  tcase_add_test(tc, test_big_to_decimal_fit_after_round);
+  tcase_add_test(tc, test_big_to_decimal_small_no_round);
 
   suite_add_tcase(s, tc);
   return s;

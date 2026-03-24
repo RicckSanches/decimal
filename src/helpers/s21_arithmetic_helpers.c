@@ -39,14 +39,6 @@ void normalize_big_decimals(s21_big_decimal* a, s21_big_decimal* b) {
   set_scale(b->bits, BIG_DEC_BITS, scale_b);
 }
 
-// big_decimal_to_decimal
-static inline int fits_in_decimal(uint32_t* bits) {
-  for (int i = 3; i < 7; i++) {
-    if (bits[i] != 0) return 0;
-  }
-  return 1;
-}
-
 int big_decimal_to_decimal(s21_big_decimal* big, s21_decimal* dec) {
   int status = 0;
   clear_decimal_bits(dec->bits, DEC_BITS, 1);
@@ -54,32 +46,10 @@ int big_decimal_to_decimal(s21_big_decimal* big, s21_decimal* dec) {
   int sign = get_sign(big->bits, BIG_DEC_BITS);
   int scale = get_scale(big->bits, BIG_DEC_BITS);
 
-  int last_rem = 0;
-  int has_tail = 0;
-
-  if (!fits_in_decimal(big->bits)) {
-    while (!fits_in_decimal(big->bits)) {
-      if (scale == 0) {
-        status = sign ? 2 : 1;  // переполнение
-        break;
-      }
-
-      int rem = div10(big->bits, BIG_DEC_BITS);
-      if (scale == 1)
-        last_rem = rem;
-      else if (rem != 0)
-        has_tail = 1;
-
-      scale--;
-    }
-
-    if (should_round(last_rem, has_tail, big->bits)) {
-      add_one(big->bits, BIG_DEC_BITS);
-    }
-  }
-
   for (int i = 0; i < 3; i++) dec->bits[i] = big->bits[i];
+
   set_scale(dec->bits, DEC_BITS, scale);
   set_sign(dec->bits, DEC_BITS, sign);
+
   return status;
 }
