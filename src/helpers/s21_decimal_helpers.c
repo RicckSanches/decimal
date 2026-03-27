@@ -1,14 +1,5 @@
 #include "../s21_decimal.h"
 
-static inline int get_mantissa_bits(int size_in_bits) {
-  return size_in_bits - 32;
-}
-
-static inline int get_mantissa_word_count(int size_in_bits) {
-  int mantissa_bits = get_mantissa_bits(size_in_bits);
-  return (mantissa_bits + 31) / 32;
-}
-
 int get_bit(const uint32_t* bits, int size_in_bits, int index) {
   int res = 0;
   int mantissa = get_mantissa_bits(size_in_bits);
@@ -94,17 +85,10 @@ int mul10(uint32_t* bits, int size_in_bits) {
   return (carry != 0);  // 1 если overflow
 }
 
-// Универсальная функция проверки округления
 // Универсальная проверка округления (для decimal и big_decimal)
 int should_round(int last_rem, int has_tail, const uint32_t* bits) {
-  if (last_rem > 5) return 1;
-  if (last_rem < 5) return 0;
-
-  // last_rem == 5
-  if (has_tail) return 1;
-
-  // round to even
-  return bits[0] & 1;
+  int round = (last_rem > 5) || (last_rem == 5 && (has_tail || (bits[0] & 1)));
+  return round;
 }
 
 // Универсальное добавление 1 к мантиссе

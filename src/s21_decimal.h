@@ -26,6 +26,15 @@ static inline int get_high_word_index(int size_in_bits) {
   return size_in_bits / 32 - 1;
 }
 
+static inline int get_mantissa_bits(int size_in_bits) {
+  return size_in_bits - 32;
+}
+
+static inline int get_mantissa_word_count(int size_in_bits) {
+  int mantissa_bits = get_mantissa_bits(size_in_bits);
+  return (mantissa_bits + 31) / 32;
+}
+
 // Арифметические операторы (4 функции)
 int s21_add(s21_decimal value_1, s21_decimal value_2, s21_decimal* result);
 int s21_sub(s21_decimal value_1, s21_decimal value_2, s21_decimal* result);
