@@ -93,9 +93,8 @@ int s21_round(s21_decimal value, s21_decimal* result) {
       scale--;
     }
 
-    // Используем универсальную функцию should_round и add_one
     if (should_round(last_rem, has_tail, result->bits)) {
-      add_one(result->bits, DEC_BITS);  // 3 слова для s21_decimal
+      add_one(result->bits, DEC_BITS);
     }
 
     set_scale(result->bits, DEC_BITS, 0);

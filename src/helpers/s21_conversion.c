@@ -1,3 +1,4 @@
+
 #include "../s21_decimal.h"
 
 int s21_from_int_to_decimal(int src, s21_decimal* dst) {
@@ -21,40 +22,44 @@ int s21_from_int_to_decimal(int src, s21_decimal* dst) {
 }
 
 int s21_from_float_to_decimal(float src, s21_decimal* dst) {
-  int err = 0;
+  int status = 0;
 
   if (!dst) {
-    err = 1;
+    status = 1;
   } else {
     clear_decimal_bits(dst->bits, DEC_BITS, 1);
 
-    if (src != 0.0f) {
-      int sign = 0;
-      if (src < 0.0f) {
-        sign = 1;
-        src = -src;
-      }
+    float abs_value = (src < 0) ? -src : src;
+
+    if ((abs_value > 0.0f && abs_value < 1e-28f) ||
+        abs_value > 79228162514264337593543950335.0f || src != src ||
+        (src * 0 != 0)) {
+      status = 1;
+    } else {
+      int sign = (src < 0) ? 1 : 0;
+      float value = abs_value;
 
       int scale = 0;
-
-      // Умножаем на 10, пока есть дробная часть и scale < 28
-      while (src != (float)(uint32_t)src && scale < 28) {
-        src *= 10.0f;
+      while (value != 0.0f && value < 10000000.0f && scale < 28) {
+        value *= 10.0f;
         scale++;
       }
 
-      // Проверка переполнения uint32_t
-      if (src > 4294967295.0f) {
-        err = 1;
-      } else {
-        dst->bits[0] = (uint32_t)src;
-        set_sign(dst->bits, DEC_BITS, sign);
-        set_scale(dst->bits, DEC_BITS, scale);
+      int int_part = (int)value;
+      float frac = value - int_part;
+      if (frac > 0.5f || (frac == 0.5f && (int_part & 1))) {
+        int_part++;
       }
+
+      dst->bits[0] = int_part;
+      dst->bits[1] = dst->bits[2] = 0;
+
+      set_scale(dst->bits, DEC_BITS, scale);
+      set_sign(dst->bits, DEC_BITS, sign);
     }
   }
 
-  return err;
+  return status;
 }
 
 int s21_from_decimal_to_int(s21_decimal src, int* dst) {

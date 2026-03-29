@@ -47,17 +47,6 @@ int main(void) {
     failed_total += failed;
   }
 
-  // -------------------- Arithmetic Helpers --------------------
-  {
-    SRunner* sr = srunner_create(arithmetic_helpers_suite());
-    printf("\n=== Running Arithmetic Helpers Tests ===\n");
-    srunner_run_all(sr, CK_VERBOSE);
-    int failed = srunner_ntests_failed(sr);
-    printf("=== Arithmetic Helpers: %d test(s) failed ===\n", failed);
-    srunner_free(sr);
-    failed_total += failed;
-  }
-
   // -------------------- Decimal Comparisons --------------------
   {
     SRunner* sr = srunner_create(comparisons_suite());
@@ -65,6 +54,17 @@ int main(void) {
     srunner_run_all(sr, CK_VERBOSE);
     int failed = srunner_ntests_failed(sr);
     printf("=== Decimal Comparisons: %d test(s) failed ===\n", failed);
+    srunner_free(sr);
+    failed_total += failed;
+  }
+
+  // -------------------- Arithmetic Helpers --------------------
+  {
+    SRunner* sr = srunner_create(arithmetic_helpers_suite());
+    printf("\n=== Running Arithmetic Helpers Tests ===\n");
+    srunner_run_all(sr, CK_VERBOSE);
+    int failed = srunner_ntests_failed(sr);
+    printf("=== Arithmetic Helpers: %d test(s) failed ===\n", failed);
     srunner_free(sr);
     failed_total += failed;
   }

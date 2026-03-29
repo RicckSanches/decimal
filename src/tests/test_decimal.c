@@ -1,48 +1,67 @@
 #include <check.h>
-
+#include <stdio.h>
 #include "../s21_decimal.h"
 
-// -------------------- Интеграционный тест: int/float → арифметика → округление
-// → обратно --------------------
-START_TEST(test_full_cycle_int_float) {
-  s21_decimal a, b, res, rounded;
-  int int_val;
-  float float_val;
+// Вспомогательная функция для сравнения int с decimal
+void assert_decimal_to_int(int expected, s21_decimal dec) {
+    int actual;
+    int res = s21_from_decimal_to_int(dec, &actual);
+    ck_assert_int_eq(res, 0);
+    ck_assert_int_eq(actual, expected);
+}
 
-  // Конвертация из int
-  s21_from_int_to_decimal(123, &a);  // a = 123
+// Вспомогательная функция для сравнения float с decimal
+void assert_decimal_to_float(float expected, s21_decimal dec) {
+    float actual;
+    int res = s21_from_decimal_to_float(dec, &actual);
+    ck_assert_int_eq(res, 0);
+    // Сравниваем с небольшой точностью
+    
+    ck_assert_double_eq_tol(actual, expected, 1e-5);
+}
 
-  // Конвертация из float
-  s21_from_float_to_decimal(-45.67f, &b);  // b = -45.67
+// -------------------- Интеграционный тест --------------------
+START_TEST(test_full_cycle_int_float_arithmetic) {
+    s21_decimal dec_a, dec_b, result;
+    int res;
 
-  // Арифметическая операция
-  s21_add(a, b, &res);  // 123 + (-45.67) = 77.33
-  ck_assert_int_eq(get_sign(res.bits, DEC_BITS), 0);
-  ck_assert_int_eq(get_scale(res.bits, DEC_BITS), 2);
+    int a = -123;
+    int b = 7;
 
-  // Банковское округление
-  s21_round(res, &rounded);  // 77.33 → 77
-  ck_assert_int_eq(get_scale(rounded.bits, DEC_BITS), 0);
-  ck_assert_int_eq(rounded.bits[0], 77);
+    // ---------------- Преобразуем int → decimal ----------------
+    res = s21_from_int_to_decimal(a, &dec_a);
+    ck_assert_int_eq(res, 0);
+    res = s21_from_int_to_decimal(b, &dec_b);
+    ck_assert_int_eq(res, 0);
 
-  // Обратная конвертация в int
-  s21_from_decimal_to_int(rounded, &int_val);
-  ck_assert_int_eq(int_val, 77);
+    // ---------------- Сложение ----------------
+    s21_add(dec_a, dec_b, &result);
+    assert_decimal_to_int(a + b, result);
 
-  // Обратная конвертация в float
-  s21_from_decimal_to_float(res, &float_val);
-  float diff = float_val - 77.33f;
-  if (diff < 0) diff = -diff;
-  ck_assert(diff < 0.01f);  // допускаем погрешность 0.01
+    // ---------------- Вычитание ----------------
+    s21_sub(dec_a, dec_b, &result);
+    assert_decimal_to_int(a - b, result);
+
+    // ---------------- Умножение ----------------
+    s21_mul(dec_a, dec_b, &result);
+    assert_decimal_to_int(a * b, result);
+
+    // ---------------- Деление → float ----------------
+    s21_div(dec_a, dec_b, &result);
+    printf("res: %u, scale: %d, sign: %d\n", result.bits[0],
+         get_scale(result.bits, DEC_BITS), get_sign(result.bits, DEC_BITS));
+    float expected_div = (float)a / (float)b;
+    assert_decimal_to_float(expected_div, result);
 }
 END_TEST
 
+// -------------------- Suite --------------------
 Suite* integrated_conversion_suite(void) {
-  Suite* s = suite_create("Full Decimal Conversion and Arithmetic");
-  TCase* tc_core = tcase_create("Core");
+    Suite* s = suite_create("Full Decimal Conversion and Arithmetic");
+    TCase* tc_core = tcase_create("Core");
 
-  tcase_add_test(tc_core, test_full_cycle_int_float);
+    tcase_add_test(tc_core, test_full_cycle_int_float_arithmetic);
 
-  suite_add_tcase(s, tc_core);
-  return s;
+    suite_add_tcase(s, tc_core);
+    return s;
 }

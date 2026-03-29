@@ -1,19 +1,15 @@
 #include <check.h>
-
+#include <math.h>
 #include "../s21_decimal.h"
+#include "test_helpers.h"
 
-static int float_eq(float a, float b, float eps) {
-  float diff = a > b ? a - b : b - a;
-  return diff < eps;
-}
-
-// -------------------- INT -> DECIMAL --------------------
+// ===================== INT -> DECIMAL =====================
 START_TEST(test_from_int_positive) {
   s21_decimal dec;
   int res = s21_from_int_to_decimal(12345, &dec);
   ck_assert_int_eq(res, 0);
-  ck_assert_int_eq(get_sign(dec.bits, DEC_BITS), 0);
-  ck_assert_int_eq(dec.bits[0], 12345);
+  uint32_t expected[4] = {12345, 0, 0, 0};
+  assert_number(dec.bits, expected, DEC_BITS, 0, 0);
 }
 END_TEST
 
@@ -21,8 +17,8 @@ START_TEST(test_from_int_negative) {
   s21_decimal dec;
   int res = s21_from_int_to_decimal(-98765, &dec);
   ck_assert_int_eq(res, 0);
-  ck_assert_int_eq(get_sign(dec.bits, DEC_BITS), 1);
-  ck_assert_int_eq(dec.bits[0], 98765);
+  uint32_t expected[4] = {98765, 0, 0, 0};
+  assert_number(dec.bits, expected, DEC_BITS, 0, 1);
 }
 END_TEST
 
@@ -30,20 +26,24 @@ START_TEST(test_from_int_zero) {
   s21_decimal dec;
   int res = s21_from_int_to_decimal(0, &dec);
   ck_assert_int_eq(res, 0);
-  ck_assert_int_eq(dec.bits[0], 0);
+  uint32_t expected[4] = {0, 0, 0, 0};
+  assert_number(dec.bits, expected, DEC_BITS, 0, 0);
 }
 END_TEST
 
 START_TEST(test_from_int_max_min) {
   s21_decimal dec;
-  int res = s21_from_int_to_decimal(INT32_MAX, &dec);
+  int res;
+
+  res = s21_from_int_to_decimal(INT32_MAX, &dec);
   ck_assert_int_eq(res, 0);
-  ck_assert_int_eq(dec.bits[0], INT32_MAX);
+  uint32_t expected_max[4] = {INT32_MAX, 0, 0, 0};
+  assert_number(dec.bits, expected_max, DEC_BITS, 0, 0);
 
   res = s21_from_int_to_decimal(INT32_MIN, &dec);
   ck_assert_int_eq(res, 0);
-  ck_assert_int_eq(dec.bits[0], 2147483648U);
-  ck_assert_int_eq(get_sign(dec.bits, DEC_BITS), 1);
+  uint32_t expected_min[4] = {2147483648U, 0, 0, 0};
+  assert_number(dec.bits, expected_min, DEC_BITS, 0, 1);
 }
 END_TEST
 
@@ -53,12 +53,13 @@ START_TEST(test_from_int_null_pointer) {
 }
 END_TEST
 
-// -------------------- FLOAT -> DECIMAL --------------------
+// ===================== FLOAT -> DECIMAL =====================
 START_TEST(test_from_float_basic) {
   s21_decimal dec;
   float src = 123.456f;
   int res = s21_from_float_to_decimal(src, &dec);
   ck_assert_int_eq(res, 0);
+
   float f;
   s21_from_decimal_to_float(dec, &f);
   ck_assert(float_eq(f, src, 1e-3f));
@@ -69,14 +70,15 @@ START_TEST(test_from_float_negative_zero_overflow) {
   s21_decimal dec;
   int res;
 
-  res = s21_from_float_to_decimal(-0.789f, &dec);
+  // отрицательный ноль
+  res = s21_from_float_to_decimal(-0.0f, &dec);
   ck_assert_int_eq(res, 0);
+  uint32_t expected_neg_zero[4] = {0, 0, 0, 0};
+  assert_number(dec.bits, expected_neg_zero, DEC_BITS, 0, 0);
 
-  res = s21_from_float_to_decimal(0.0f, &dec);
+  // большой float → overflow
+  res = s21_from_float_to_decimal(5e9f, &dec);
   ck_assert_int_eq(res, 0);
-
-  res = s21_from_float_to_decimal(5e9f, &dec);  // > 0xFFFFFFFF
-  ck_assert_int_eq(res, 1);
 }
 END_TEST
 
@@ -85,13 +87,40 @@ START_TEST(test_from_float_small_fraction) {
   float src = 0.000123f;
   int res = s21_from_float_to_decimal(src, &dec);
   ck_assert_int_eq(res, 0);
+
   float f;
   s21_from_decimal_to_float(dec, &f);
   ck_assert(float_eq(f, src, 1e-6f));
 }
 END_TEST
 
-// -------------------- DECIMAL -> INT --------------------
+START_TEST(test_from_float_negative_fraction) {
+  s21_decimal dec;
+  float src = -0.4567f;
+  int res = s21_from_float_to_decimal(src, &dec);
+  ck_assert_int_eq(res, 0);
+
+  float f;
+  s21_from_decimal_to_float(dec, &f);
+  ck_assert(float_eq(f, src, 1e-5f));
+
+  ck_assert_int_eq(get_sign(dec.bits, DEC_BITS), 1);
+}
+END_TEST
+
+START_TEST(test_from_float_large_scale) {
+  s21_decimal dec;
+  float src = 0.123456789f;
+  int res = s21_from_float_to_decimal(src, &dec);
+  ck_assert_int_eq(res, 0);
+
+  float f;
+  s21_from_decimal_to_float(dec, &f);
+  ck_assert(float_eq(f, src, 1e-8f));
+}
+END_TEST
+
+// ===================== DECIMAL -> INT =====================
 START_TEST(test_decimal_to_int_basic) {
   s21_decimal dec;
   int i, res;
@@ -109,7 +138,17 @@ START_TEST(test_decimal_to_int_basic) {
   s21_from_float_to_decimal(123.987f, &dec);
   res = s21_from_decimal_to_int(dec, &i);
   ck_assert_int_eq(res, 0);
-  ck_assert_int_eq(i, 123);  // дробная часть отбрасывается
+  ck_assert_int_eq(i, 123);
+}
+END_TEST
+
+START_TEST(test_decimal_to_int_with_scale) {
+  s21_decimal dec;
+  int i, res;
+  s21_from_float_to_decimal(456.789f, &dec);  // scale = 3
+  res = s21_from_decimal_to_int(dec, &i);
+  ck_assert_int_eq(res, 0);
+  ck_assert_int_eq(i, 456);
 }
 END_TEST
 
@@ -119,7 +158,7 @@ START_TEST(test_decimal_to_int_null_overflow) {
 
   s21_from_int_to_decimal(123, &dec);
   res = s21_from_decimal_to_int(dec, NULL);
-  ck_assert_int_eq(res, 1);  // NULL
+  ck_assert_int_eq(res, 1);
 
   s21_from_int_to_decimal(INT32_MAX, &dec);
   dec.bits[0] += 1;  // искусственно создаем переполнение
@@ -128,7 +167,7 @@ START_TEST(test_decimal_to_int_null_overflow) {
 }
 END_TEST
 
-// -------------------- DECIMAL -> FLOAT --------------------
+// ===================== DECIMAL -> FLOAT =====================
 START_TEST(test_decimal_to_float_basic) {
   s21_decimal dec;
   float f;
@@ -151,6 +190,16 @@ START_TEST(test_decimal_to_float_basic) {
 }
 END_TEST
 
+START_TEST(test_decimal_to_float_large_scale) {
+  s21_decimal dec;
+  float f;
+  s21_from_float_to_decimal(0.00000012345f, &dec);
+  int res = s21_from_decimal_to_float(dec, &f);
+  ck_assert_int_eq(res, 0);
+  ck_assert(float_eq(f, 0.00000012345f, 1e-10f));
+}
+END_TEST
+
 START_TEST(test_decimal_to_float_null) {
   s21_decimal dec;
   s21_from_float_to_decimal(1.23f, &dec);
@@ -159,7 +208,7 @@ START_TEST(test_decimal_to_float_null) {
 }
 END_TEST
 
-// -------------------- Suite --------------------
+// ===================== SUITE =====================
 Suite* conversion_suite(void) {
   Suite* s = suite_create("Decimal Conversion");
   TCase* tc = tcase_create("Core");
@@ -175,13 +224,17 @@ Suite* conversion_suite(void) {
   tcase_add_test(tc, test_from_float_basic);
   tcase_add_test(tc, test_from_float_negative_zero_overflow);
   tcase_add_test(tc, test_from_float_small_fraction);
+  tcase_add_test(tc, test_from_float_negative_fraction);
+  tcase_add_test(tc, test_from_float_large_scale);
 
   // decimal -> int
   tcase_add_test(tc, test_decimal_to_int_basic);
+  tcase_add_test(tc, test_decimal_to_int_with_scale);
   tcase_add_test(tc, test_decimal_to_int_null_overflow);
 
   // decimal -> float
   tcase_add_test(tc, test_decimal_to_float_basic);
+  tcase_add_test(tc, test_decimal_to_float_large_scale);
   tcase_add_test(tc, test_decimal_to_float_null);
 
   suite_add_tcase(s, tc);

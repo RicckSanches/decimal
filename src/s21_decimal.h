@@ -69,15 +69,22 @@ void set_sign(uint32_t* bits, int size_in_bits, int sign);
 int get_scale(const uint32_t* bits, int size_in_bits);
 void set_scale(uint32_t* bits, int size_in_bits, int scale);
 void clear_decimal_bits(uint32_t* bits, int size_in_bits, int clear_metadata);
-int div10(uint32_t* bits, int size_in_bits);
-int mul10(uint32_t* bits, int size_in_bits);
-int should_round(int last_rem, int has_tail, const uint32_t* bits);
-void add_one(uint32_t* bits, int size_in_bits);
 
 // arithmetic_helpers
 void decimal_to_big_decimal(s21_decimal* dec, s21_big_decimal* big);
 int is_zero(const uint32_t* bits, int size_in_bits);
 void normalize_big_decimals(s21_big_decimal* a, s21_big_decimal* b);
-int big_decimal_to_decimal(s21_big_decimal* big, s21_decimal* dec);
+void big_decimal_to_decimal(s21_big_decimal* big, s21_decimal* dec);
+int div10(uint32_t* bits, int size_in_bits);
+int mul10(uint32_t* bits, int size_in_bits);
+int should_round(int last_rem, int has_tail, const uint32_t* bits);
+void add_one(uint32_t* bits, int size_in_bits);
+int fits_in_decimal(uint32_t* bits);
+int compare_big_decimals(const s21_big_decimal* a, const s21_big_decimal* b);
+void big_add(s21_big_decimal* a, const s21_big_decimal* b);
+void big_sub(s21_big_decimal* a, const s21_big_decimal* b);
+void big_mul(const s21_big_decimal* a, const s21_big_decimal* b, s21_big_decimal* res);
+void big_div_digit(const s21_big_decimal* divisor, s21_big_decimal* remainder, uint32_t* digit);
+int apply_bankers_rounding(s21_big_decimal* value, int* scale);
 
 #endif
