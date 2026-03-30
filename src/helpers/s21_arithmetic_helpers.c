@@ -1,9 +1,6 @@
 #include "../s21_decimal.h"
 
-// ===================== Конвертация =====================
-
 // Преобразование обычного decimal в big_decimal
-// Копирует мантиссу, а также scale и sign
 void decimal_to_big_decimal(s21_decimal* dec, s21_big_decimal* big) {
   clear_decimal_bits(big->bits, BIG_DEC_BITS, 1);
   int words = get_mantissa_word_count(DEC_BITS);
@@ -14,74 +11,60 @@ void decimal_to_big_decimal(s21_decimal* dec, s21_big_decimal* big) {
 }
 
 // Проверка, является ли число нулем
-// size_in_bits = DEC_BITS или BIG_DEC_BITS
 int is_zero(const uint32_t* bits, int size_in_bits) {
-  int high = get_high_word_index(size_in_bits);  // число слов мантиссы
+  int high = get_high_word_index(size_in_bits);
   for (int i = 0; i < high; i++) {
-    if (bits[i] != 0) return 0;  // найден ненулевой бит → число не ноль
+    if (bits[i] != 0) return 0;
   }
-  return 1;  // все биты мантиссы нули → число равно нулю
+  return 1;
 }
 
 // ===================== Нормализация =====================
-
-// Выравнивание scale и знака двух big_decimal чисел
-// Нужно для операций сложения/вычитания
 void normalize_big_decimals(s21_big_decimal* a, s21_big_decimal* b) {
   int scale_a = get_scale(a->bits, BIG_DEC_BITS);
   int scale_b = get_scale(b->bits, BIG_DEC_BITS);
 
-  // Если одно число 0, просто копируем scale
   if (is_zero(a->bits, BIG_DEC_BITS)) scale_a = scale_b;
   if (is_zero(b->bits, BIG_DEC_BITS)) scale_b = scale_a;
 
-  // Увеличиваем scale_a до scale_b, пока не переполним a
   while (scale_a < scale_b && !mul10(a->bits, BIG_DEC_BITS)) scale_a++;
 
-  // Увеличиваем scale_b до scale_a, пока не переполним b
   while (scale_b < scale_a && !mul10(b->bits, BIG_DEC_BITS)) scale_b++;
 
-  // Сохраняем обновлённые scale
   set_scale(a->bits, BIG_DEC_BITS, scale_a);
   set_scale(b->bits, BIG_DEC_BITS, scale_b);
 }
 
 // ===================== BigDecimal -> Decimal =====================
 
-// Преобразование big_decimal обратно в обычный decimal
 void big_decimal_to_decimal(s21_big_decimal* big, s21_decimal* dec) {
-  clear_decimal_bits(dec->bits, DEC_BITS, 1);  // обнуляем результат
+  clear_decimal_bits(dec->bits, DEC_BITS, 1);
 
   int sign = get_sign(big->bits, BIG_DEC_BITS);
   int scale = get_scale(big->bits, BIG_DEC_BITS);
 
   int mantissa_words = get_mantissa_word_count(DEC_BITS);
   for (int i = 0; i < mantissa_words; i++) {
-    dec->bits[i] = big->bits[i];  // копируем мантиссу
+    dec->bits[i] = big->bits[i];
   }
 
-  set_scale(dec->bits, DEC_BITS, scale);  // копируем scale
-  set_sign(dec->bits, DEC_BITS, sign);    // копируем sign
+  set_scale(dec->bits, DEC_BITS, scale);
+  set_sign(dec->bits, DEC_BITS, sign);
 }
 
-// ===================== Деление и умножение на 10 =====================
-
-// Делим big_decimal на 10, возвращаем остаток (0..9)
 int div10(uint32_t* bits, int size_in_bits) {
   uint64_t remainder = 0;
   int high = get_high_word_index(size_in_bits);
 
-  // идём по всем словам мантиссы, старший сначала
   for (int i = high - 1; i >= 0; i--) {
     uint64_t cur = (remainder << 32) | bits[i];
     bits[i] = (uint32_t)(cur / 10);
     remainder = cur % 10;
   }
 
-  return (int)remainder;  // остаток от деления
+  return (int)remainder;
 }
 
-// Умножение big_decimal на 10 (для normalize)
 int mul10(uint32_t* bits, int size_in_bits) {
   uint64_t carry = 0;
   int high = get_high_word_index(size_in_bits);
@@ -92,21 +75,14 @@ int mul10(uint32_t* bits, int size_in_bits) {
     carry = cur >> 32;
   }
 
-  return (carry != 0);  // 1 если произошло переполнение
+  return (carry != 0);
 }
 
-// ===================== Округление =====================
-
-// Определяем, нужно ли округлять число
-// last_rem - последняя цифра, has_tail - есть ли хвост после last_rem
 int should_round(int last_rem, int has_tail, const uint32_t* bits) {
-  // округляем, если last_rem > 5 или равно 5 и (есть хвост или младший бит
-  // мантиссы нечетный)
   int round = (last_rem > 5) || (last_rem == 5 && (has_tail || (bits[0] & 1)));
   return round;
 }
 
-// Добавляем 1 к мантиссе decimal или big_decimal
 void add_one(uint32_t* bits, int size_in_bits) {
   uint64_t carry = 1;
   int word_count = get_mantissa_word_count(size_in_bits);
@@ -118,18 +94,13 @@ void add_one(uint32_t* bits, int size_in_bits) {
   }
 }
 
-// ===================== Вспомогательные функции =====================
-
-// Проверка, помещается ли big_decimal в обычный decimal
 int fits_in_decimal(uint32_t* bits) {
-  for (int i = 3; i < 7; i++) {  // проверяем старшие слова
+  for (int i = 3; i < 7; i++) {
     if (bits[i] != 0) return 0;
   }
   return 1;
 }
 
-// Сравнение двух big_decimal
-// Возвращает 1 если a > b, -1 если a < b, 0 если равны
 int compare_big_decimals(const s21_big_decimal* a, const s21_big_decimal* b) {
   int high = get_high_word_index(BIG_DEC_BITS);
   for (int i = high - 1; i >= 0; i--) {
@@ -138,7 +109,6 @@ int compare_big_decimals(const s21_big_decimal* a, const s21_big_decimal* b) {
   return 0;
 }
 
-// Сложение двух big_decimal
 void big_add(s21_big_decimal* a, const s21_big_decimal* b) {
   uint64_t carry = 0;
   int words = get_mantissa_word_count(BIG_DEC_BITS);
@@ -148,7 +118,6 @@ void big_add(s21_big_decimal* a, const s21_big_decimal* b) {
     carry = sum >> 32;
   }
 }
-
 
 void big_sub(s21_big_decimal* a, const s21_big_decimal* b) {
   int64_t borrow = 0;
@@ -164,7 +133,6 @@ void big_sub(s21_big_decimal* a, const s21_big_decimal* b) {
   }
 }
 
-
 void big_mul(const s21_big_decimal* a, const s21_big_decimal* b,
              s21_big_decimal* res) {
   clear_decimal_bits(res->bits, BIG_DEC_BITS, 1);
@@ -179,11 +147,9 @@ void big_mul(const s21_big_decimal* a, const s21_big_decimal* b,
   }
 }
 
-
 void big_div_digit(const s21_big_decimal* divisor, s21_big_decimal* remainder,
                    uint32_t* digit) {
   *digit = 0;
-
 
   if (compare_big_decimals(divisor, remainder) > 0) return;
 
@@ -204,7 +170,7 @@ void big_div_digit(const s21_big_decimal* divisor, s21_big_decimal* remainder,
 
     int cmp = compare_big_decimals(&prod, remainder);
     if (cmp <= 0) {
-      best = mid;  
+      best = mid;
       left = mid + 1;
     } else {
       if (mid == 0) break;
@@ -213,7 +179,6 @@ void big_div_digit(const s21_big_decimal* divisor, s21_big_decimal* remainder,
   }
 
   *digit = best;
-
 
   if (*digit > 0) {
     clear_decimal_bits(tmp.bits, BIG_DEC_BITS, 1);
@@ -226,26 +191,35 @@ void big_div_digit(const s21_big_decimal* divisor, s21_big_decimal* remainder,
   }
 }
 
-
 int apply_bankers_rounding(s21_big_decimal* value, int* scale) {
   int status = S21_OK;
+  int remainder = 0;
 
-  while (!fits_in_decimal(value->bits)) {  
+  while (!fits_in_decimal(value->bits) || *scale > 28) {
     if (*scale == 0) {
-
-      return get_sign(value->bits, BIG_DEC_BITS) ? S21_TOO_SMALL : S21_TOO_BIG;
+      status = get_sign(value->bits, BIG_DEC_BITS) ? S21_TOO_SMALL : S21_TOO_BIG;
     }
-
-    int remainder = div10(value->bits, BIG_DEC_BITS);
+    remainder = div10(value->bits, BIG_DEC_BITS);
     (*scale)--;
-
-    if (should_round(remainder, 0, value->bits)) {
-      add_one(value->bits, BIG_DEC_BITS);
-    }
   }
 
-  if (*scale > 28) *scale = 28;
-  if (*scale < 0) *scale = 0;
+  if (should_round(remainder, 0, value->bits)) {
+    add_one(value->bits, BIG_DEC_BITS);
+  }
+
+  // 🔹 3. Удаляем trailing zeros
+  while (*scale > 0) {
+    int r = div10(value->bits, BIG_DEC_BITS);
+    if (r != 0) {
+      // остаток не ноль → откатываем
+      mul10(value->bits, BIG_DEC_BITS);
+      value->bits[0] += r;
+      break;
+    }
+    (*scale)--;
+  }
+
+  // 🔹 4. Устанавливаем scale
   set_scale(value->bits, BIG_DEC_BITS, *scale);
 
   return status;

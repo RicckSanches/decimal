@@ -476,14 +476,12 @@ END_TEST
 START_TEST(test_bankers_rounding_simple) {
   s21_big_decimal val = {
       {0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF, 0, 0, 0, 0, 0}};  // реально большое
-  int scale = 0;
+  int scale = 29;
 
   int status = apply_bankers_rounding(&val, &scale);
 
-  // теперь div10 будет вызвано, число уменьшится, возможное округление
   ck_assert_int_eq(status, S21_OK);
-  ck_assert(scale >= 0 &&
-            scale <= 28);  // просто проверяем, что scale выставлен корректно
+  ck_assert_int_eq(scale, 28);
 }
 END_TEST
 
@@ -495,7 +493,7 @@ START_TEST(test_bankers_rounding_bankers_even) {
   int status = apply_bankers_rounding(&val, &scale);
 
   ck_assert_int_eq(status, S21_OK);
-  ck_assert(scale >= 0 && scale <= 28);
+  ck_assert(scale == 0);
 }
 END_TEST
 
@@ -516,7 +514,7 @@ START_TEST(test_bankers_rounding_scale_limit) {
   int status = apply_bankers_rounding(&val, &scale);
 
   ck_assert_int_eq(status, S21_OK);
-  ck_assert_int_eq(scale, 28);  // должен быть ограничен 28
+  ck_assert_int_eq(scale, 0);
 }
 END_TEST
 

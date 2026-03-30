@@ -51,15 +51,18 @@ int s21_mul(s21_decimal value_1, s21_decimal value_2, s21_decimal* result) {
   decimal_to_big_decimal(&value_1, &a);
   decimal_to_big_decimal(&value_2, &b);
 
-  int result_sign =
-      get_sign(a.bits, BIG_DEC_BITS) ^ get_sign(b.bits, BIG_DEC_BITS);
+  int sign = get_sign(a.bits, BIG_DEC_BITS) ^ get_sign(b.bits, BIG_DEC_BITS);
+
   int scale = get_scale(a.bits, BIG_DEC_BITS) + get_scale(b.bits, BIG_DEC_BITS);
 
   big_mul(&a, &b, &res_big);
-  set_sign(res_big.bits, BIG_DEC_BITS, result_sign);
 
   int status = apply_bankers_rounding(&res_big, &scale);
+
   big_decimal_to_decimal(&res_big, result);
+
+  set_sign(result->bits, DEC_BITS, sign);
+  set_scale(result->bits, DEC_BITS, scale);
 
   return status;
 }
@@ -75,10 +78,6 @@ int s21_div(s21_decimal value_1, s21_decimal value_2, s21_decimal* result) {
   // Вычисляем знак результата
   int sign_res =
       get_sign(a_big.bits, BIG_DEC_BITS) ^ get_sign(b_big.bits, BIG_DEC_BITS);
-
-  // Нормализуем scale чисел перед делением
-  normalize_big_decimals(&a_big, &b_big);
-
   s21_big_decimal remainder = a_big;
   clear_decimal_bits(res_big.bits, BIG_DEC_BITS, 1);
 
@@ -86,32 +85,21 @@ int s21_div(s21_decimal value_1, s21_decimal value_2, s21_decimal* result) {
   int scale_a = get_scale(a_big.bits, BIG_DEC_BITS);
   int scale_b = get_scale(b_big.bits, BIG_DEC_BITS);
   int result_scale = scale_a - scale_b;
-  if (result_scale < 0) result_scale = 0;
 
   const int MAX_SCALE = 28;
 
   // Основной цикл: формируем результат цифра за цифрой
-  for (int i = 0; i <= MAX_SCALE; i++) {
-    if (is_zero(remainder.bits, BIG_DEC_BITS)) break;
-
-    // Делим остаток на делитель, получаем следующую цифру
+  while (!is_zero(remainder.bits, BIG_DEC_BITS) && result_scale <= MAX_SCALE) {
     uint32_t digit = 0;
     big_div_digit(&b_big, &remainder, &digit);
-
-    mul10(res_big.bits, BIG_DEC_BITS); 
-
-    // Прибавляем новую цифру
-    add_one(res_big.bits, BIG_DEC_BITS);  // для digit > 0
+    mul10(res_big.bits, BIG_DEC_BITS);
     res_big.bits[0] += digit;
-
-    // Если остаток не ноль и scale < MAX_SCALE, готовим следующий шаг
-    if (!is_zero(remainder.bits, BIG_DEC_BITS) && result_scale < MAX_SCALE) {
+    if (!is_zero(remainder.bits, BIG_DEC_BITS)) {
       mul10(remainder.bits, BIG_DEC_BITS);
       result_scale++;
     }
   }
 
-  // Применяем банковское округление для приведения к обычному decimal
   int status = apply_bankers_rounding(&res_big, &result_scale);
 
   // Конвертируем обратно в decimal
